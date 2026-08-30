@@ -36,11 +36,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function configurarFecha() {
   const dateInput = document.getElementById("date");
-  if (dateInput) dateInput.valueAsDate = new Date();
+  if (dateInput && !dateInput.value) dateInput.valueAsDate = new Date();
 }
 
 function inicializarEventos() {
-  document.getElementById("transactionForm").addEventListener("submit", agregarTransaccion);
+  document.getElementById("transactionForm").addEventListener("submit", guardarTransaccion);
   document.getElementById("budgetForm").addEventListener("submit", agregarPresupuesto);
   document.getElementById("filterText").addEventListener("input", filtrarTransacciones);
   document.getElementById("filterCategory").addEventListener("change", filtrarTransacciones);
@@ -50,13 +50,15 @@ function inicializarEventos() {
 function renderTodo() {
   mostrarTransacciones();
   mostrarPresupuestos();
+  mostrarAlertasPresupuesto();
   actualizarResumen();
   actualizarGraficos();
 }
 
-function agregarTransaccion(e) {
+function guardarTransaccion(e) {
   e.preventDefault();
 
+  const id = document.getElementById("transactionId").value;
   const description = document.getElementById("description").value.trim();
   const amount = parseFloat(document.getElementById("amount").value);
   const category = document.getElementById("category").value;
@@ -68,32 +70,70 @@ function agregarTransaccion(e) {
     return;
   }
 
-  const transaction = {
-    id: Date.now(),
-    description,
-    amount,
-    category,
-    type,
-    date
-  };
+  if (id) {
+    transactions = transactions.map(t =>
+      t.id === Number(id)
+        ? { ...t, description, amount, category, type, date }
+        : t
+    );
+    alert("✅ Transacción editada.");
+  } else {
+    transactions.push({
+      id: Date.now(),
+      description,
+      amount,
+      category,
+      type,
+      date
+    });
+    alert("✅ Transacción agregada.");
+  }
 
-  transactions.push(transaction);
   guardarDatos();
-  document.getElementById("transactionForm").reset();
-  configurarFecha();
+  limpiarFormularioTransaccion();
+  llenarMesesReporte();
   renderTodo();
   filtrarTransacciones();
-  llenarMesesReporte();
-  alert("✅ Transacción agregada.");
+}
+
+function editarTransaccion(id) {
+  const t = transactions.find(item => item.id === id);
+  if (!t) return;
+
+  document.getElementById("transactionId").value = t.id;
+  document.getElementById("description").value = t.description;
+  document.getElementById("amount").value = t.amount;
+  document.getElementById("category").value = t.category;
+  document.getElementById("type").value = t.type;
+  document.getElementById("date").value = t.date;
+
+  document.getElementById("transactionFormTitle").textContent = "✏️ Editar Transacción";
+  document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
+  document.getElementById("cancelEditBtn").classList.remove("hidden");
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelarEdicion() {
+  limpiarFormularioTransaccion();
+}
+
+function limpiarFormularioTransaccion() {
+  document.getElementById("transactionForm").reset();
+  document.getElementById("transactionId").value = "";
+  document.getElementById("transactionFormTitle").textContent = "➕ Nueva Transacción";
+  document.getElementById("submitTransactionBtn").textContent = "Agregar Transacción";
+  document.getElementById("cancelEditBtn").classList.add("hidden");
+  configurarFecha();
 }
 
 function eliminarTransaccion(id) {
   if (!confirm("¿Deseas eliminar esta transacción?")) return;
   transactions = transactions.filter(t => t.id !== id);
   guardarDatos();
+  llenarMesesReporte();
   renderTodo();
   filtrarTransacciones();
-  llenarMesesReporte();
 }
 
 function mostrarTransacciones(listaPersonalizada = null) {
@@ -116,6 +156,7 @@ function mostrarTransacciones(listaPersonalizada = null) {
         ${t.type === "gasto" ? "-" : "+"}$${t.amount.toFixed(2)}
       </div>
       <div class="transaction-actions">
+        <button class="btn btn-warning btn-small" onclick="editarTransaccion(${t.id})">Editar</button>
         <button class="btn btn-danger btn-small" onclick="eliminarTransaccion(${t.id})">Eliminar</button>
       </div>
     </div>
@@ -149,6 +190,13 @@ function filtrarTransacciones() {
   mostrarTransacciones(filtradas);
 }
 
+function reiniciarFiltros() {
+  document.getElementById("filterText").value = "";
+  document.getElementById("filterCategory").value = "";
+  document.getElementById("filterType").value = "";
+  mostrarTransacciones();
+}
+
 function agregarPresupuesto(e) {
   e.preventDefault();
 
@@ -174,6 +222,23 @@ function eliminarPresupuesto(category) {
   renderTodo();
 }
 
+function obtenerEstadoPresupuesto(category) {
+  const budgetAmount = budgets[category];
+  const spent = transactions
+    .filter(t => t.category === category && t.type === "gasto")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const percent = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
+
+  return {
+    budgetAmount,
+    spent,
+    percent,
+    warning: percent >= 80 && percent < 100,
+    exceeded: percent >= 100
+  };
+}
+
 function mostrarPresupuestos() {
   const lista = document.getElementById("budgetsList");
   const keys = Object.keys(budgets);
@@ -184,30 +249,50 @@ function mostrarPresupuestos() {
   }
 
   lista.innerHTML = keys.map(category => {
-    const budgetAmount = budgets[category];
-    const spent = transactions
-      .filter(t => t.category === category && t.type === "gasto")
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const percent = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
-    const exceeded = spent > budgetAmount;
+    const estado = obtenerEstadoPresupuesto(category);
 
     return `
-      <div class="budget-item">
+      <div class="budget-item ${estado.warning ? "alerta" : ""} ${estado.exceeded ? "excedido" : ""}">
         <div>
           <div><strong>${categoryEmojis[category]} ${categoryNames[category]}</strong></div>
           <div class="budget-progress">
-            <div class="budget-progress-bar ${exceeded ? "exceeded" : ""}" style="width:${Math.min(percent, 100)}%"></div>
+            <div class="budget-progress-bar ${estado.exceeded ? "exceeded" : estado.warning ? "warning" : ""}" style="width:${Math.min(estado.percent, 100)}%"></div>
           </div>
-          <small>Gastado: $${spent.toFixed(2)} / Presupuesto: $${budgetAmount.toFixed(2)}</small>
+          <small>Gastado: $${estado.spent.toFixed(2)} / Presupuesto: $${estado.budgetAmount.toFixed(2)}</small>
         </div>
         <div>
-          <div>${percent.toFixed(0)}%</div>
+          <div>${estado.percent.toFixed(0)}%</div>
           <button class="btn btn-danger btn-small" onclick="eliminarPresupuesto('${category}')">Eliminar</button>
         </div>
       </div>
     `;
   }).join("");
+}
+
+function mostrarAlertasPresupuesto() {
+  const contenedor = document.getElementById("budgetAlerts");
+  const keys = Object.keys(budgets);
+
+  if (keys.length === 0) {
+    contenedor.innerHTML = "";
+    return;
+  }
+
+  const alertas = keys.map(category => {
+    const estado = obtenerEstadoPresupuesto(category);
+
+    if (estado.exceeded) {
+      return `<div class="alert-box danger">🚨 Has superado el presupuesto de ${categoryNames[category]} (${estado.percent.toFixed(0)}%)</div>`;
+    }
+
+    if (estado.warning) {
+      return `<div class="alert-box warning">⚠️ Estás cerca del límite en ${categoryNames[category]} (${estado.percent.toFixed(0)}%)</div>`;
+    }
+
+    return "";
+  }).filter(Boolean);
+
+  contenedor.innerHTML = alertas.join("");
 }
 
 function actualizarResumen() {
@@ -257,10 +342,7 @@ function actualizarGraficoGastos() {
       labels,
       datasets: [{
         data,
-        backgroundColor: [
-          "#6366f1", "#8b5cf6", "#10b981", "#f59e0b",
-          "#ef4444", "#06b6d4", "#84cc16", "#f97316"
-        ]
+        backgroundColor: ["#6366f1", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#84cc16", "#f97316"]
       }]
     },
     options: {
@@ -433,6 +515,7 @@ function limpiarDatos() {
   transactions = [];
   budgets = {};
   guardarDatos();
+  limpiarFormularioTransaccion();
   llenarMesesReporte();
   renderTodo();
   document.getElementById("reportContent").innerHTML =
