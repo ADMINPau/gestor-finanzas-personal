@@ -2,6 +2,21 @@ let transactions = [];
 let budgets = {};
 let gastosChart = null;
 let balanceChart = null;
+let displayCurrency = "VES";
+
+let exchangeRates = {
+  VES: 1,
+  USD: 36.5,
+  EUR: 39.8,
+  USDT: 37.1
+};
+
+const currencyLabels = {
+  VES: "Bolívar (VES)",
+  USD: "USD BCV (simulado)",
+  EUR: "EUR BCV (simulado)",
+  USDT: "USDT Binance (simulado)"
+};
 
 const categoryEmojis = {
   alimentacion: "🍔",
@@ -27,10 +42,13 @@ const categoryNames = {
 
 document.addEventListener("DOMContentLoaded", () => {
   cargarDatos();
+  cargarTasas();
+  cargarConfiguracionMoneda();
   inicializarTema();
   configurarFecha();
   inicializarEventos();
   llenarMesesReporte();
+  pintarFormularioTasas();
   renderTodo();
 });
 
@@ -55,25 +73,71 @@ function renderTodo() {
   actualizarGraficos();
 }
 
+function formatMoney(value, currency = displayCurrency) {
+  const localeMap = {
+    VES: "es-VE",
+    USD: "en-US",
+    EUR: "es-ES",
+    USDT: "en-US"
+  };
+
+  if (currency === "USDT") {
+    return `${Number(value).toFixed(2)} USDT`;
+  }
+
+  try {
+    return new Intl.NumberFormat(localeMap[currency] || "es-VE", {
+      style: "currency",
+      currency
+    }).format(value);
+  } catch {
+    return `${Number(value).toFixed(2)} ${currency}`;
+  }
+}
+
+function convertToVES(amount, currency) {
+  if (currency === "VES") return amount;
+  return amount * (exchangeRates[currency] || 1);
+}
+
+function convertFromVES(amountVES, currency) {
+  if (currency === "VES") return amountVES;
+  return amountVES / (exchangeRates[currency] || 1);
+}
+
 function guardarTransaccion(e) {
   e.preventDefault();
 
   const id = document.getElementById("transactionId").value;
   const description = document.getElementById("description").value.trim();
   const amount = parseFloat(document.getElementById("amount").value);
+  const transactionCurrency = document.getElementById("transactionCurrency").value;
   const category = document.getElementById("category").value;
   const type = document.getElementById("type").value;
   const date = document.getElementById("date").value;
+  const notes = document.getElementById("notes").value.trim();
 
-  if (!description || !category || !type || !date || isNaN(amount) || amount <= 0) {
+  if (!description || !category || !type || !date || !transactionCurrency || isNaN(amount) || amount <= 0) {
     alert("Completa todos los campos correctamente.");
     return;
   }
 
+  const amountVES = convertToVES(amount, transactionCurrency);
+
   if (id) {
     transactions = transactions.map(t =>
       t.id === Number(id)
-        ? { ...t, description, amount, category, type, date }
+        ? {
+            ...t,
+            description,
+            amountOriginal: amount,
+            currency: transactionCurrency,
+            amountVES,
+            category,
+            type,
+            date,
+            notes
+          }
         : t
     );
     alert("✅ Transacción editada.");
@@ -81,10 +145,13 @@ function guardarTransaccion(e) {
     transactions.push({
       id: Date.now(),
       description,
-      amount,
+      amountOriginal: amount,
+      currency: transactionCurrency,
+      amountVES,
       category,
       type,
-      date
+      date,
+      notes
     });
     alert("✅ Transacción agregada.");
   }
@@ -102,10 +169,12 @@ function editarTransaccion(id) {
 
   document.getElementById("transactionId").value = t.id;
   document.getElementById("description").value = t.description;
-  document.getElementById("amount").value = t.amount;
+  document.getElementById("amount").value = t.amountOriginal ?? t.amountVES;
+  document.getElementById("transactionCurrency").value = t.currency || "VES";
   document.getElementById("category").value = t.category;
   document.getElementById("type").value = t.type;
   document.getElementById("date").value = t.date;
+  document.getElementById("notes").value = t.notes || "";
 
   document.getElementById("transactionFormTitle").textContent = "✏️ Editar Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
@@ -124,6 +193,7 @@ function limpiarFormularioTransaccion() {
   document.getElementById("transactionFormTitle").textContent = "➕ Nueva Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Agregar Transacción";
   document.getElementById("cancelEditBtn").classList.add("hidden");
+  document.getElementById("transactionCurrency").value = "VES";
   configurarFecha();
 }
 
@@ -145,22 +215,29 @@ function mostrarTransacciones(listaPersonalizada = null) {
     return;
   }
 
-  lista.innerHTML = base.map(t => `
-    <div class="transaction-item ${t.type}">
-      <div class="transaction-info">
-        <div class="transaction-category">${categoryEmojis[t.category]} ${categoryNames[t.category]}</div>
-        <div class="transaction-description">${t.description}</div>
-        <div class="transaction-date">${formatearFecha(t.date)}</div>
+  lista.innerHTML = base.map(t => {
+    const visibleAmount = convertFromVES(t.amountVES, displayCurrency);
+    return `
+      <div class="transaction-item ${t.type}">
+        <div class="transaction-info">
+          <div class="transaction-category">${categoryEmojis[t.category]} ${categoryNames[t.category]}</div>
+          <div class="transaction-description">${escapeHtml(t.description)}</div>
+          <div class="transaction-date">${formatearFecha(t.date)}</div>
+          <div class="transaction-original">
+            Original: ${formatMoney(t.amountOriginal ?? t.amountVES, t.currency || "VES")} · ${currencyLabels[t.currency || "VES"]}
+          </div>
+          ${t.notes ? `<div class="transaction-notes">📝 ${escapeHtml(t.notes)}</div>` : ""}
+        </div>
+        <div class="transaction-amount ${t.type}">
+          ${t.type === "gasto" ? "-" : "+"}${formatMoney(visibleAmount, displayCurrency)}
+        </div>
+        <div class="transaction-actions">
+          <button class="btn btn-warning btn-small" onclick="editarTransaccion(${t.id})">Editar</button>
+          <button class="btn btn-danger btn-small" onclick="eliminarTransaccion(${t.id})">Eliminar</button>
+        </div>
       </div>
-      <div class="transaction-amount ${t.type}">
-        ${t.type === "gasto" ? "-" : "+"}$${t.amount.toFixed(2)}
-      </div>
-      <div class="transaction-actions">
-        <button class="btn btn-warning btn-small" onclick="editarTransaccion(${t.id})">Editar</button>
-        <button class="btn btn-danger btn-small" onclick="eliminarTransaccion(${t.id})">Eliminar</button>
-      </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
 
 function filtrarTransacciones() {
@@ -170,13 +247,10 @@ function filtrarTransacciones() {
 
   const filtradas = transactions
     .filter(t => {
-      const coincideTexto =
-        t.description.toLowerCase().includes(texto) ||
-        categoryNames[t.category].toLowerCase().includes(texto);
-
+      const textoBase = `${t.description} ${t.notes || ""} ${categoryNames[t.category]} ${t.currency || ""}`.toLowerCase();
+      const coincideTexto = textoBase.includes(texto);
       const coincideCategoria = !categoria || t.category === categoria;
       const coincideTipo = !tipo || t.type === tipo;
-
       return coincideTexto && coincideCategoria && coincideTipo;
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -226,7 +300,7 @@ function obtenerEstadoPresupuesto(category) {
   const budgetAmount = budgets[category];
   const spent = transactions
     .filter(t => t.category === category && t.type === "gasto")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amountVES, 0);
 
   const percent = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
 
@@ -250,6 +324,8 @@ function mostrarPresupuestos() {
 
   lista.innerHTML = keys.map(category => {
     const estado = obtenerEstadoPresupuesto(category);
+    const spentVisible = convertFromVES(estado.spent, displayCurrency);
+    const budgetVisible = convertFromVES(estado.budgetAmount, displayCurrency);
 
     return `
       <div class="budget-item ${estado.warning ? "alerta" : ""} ${estado.exceeded ? "excedido" : ""}">
@@ -258,7 +334,7 @@ function mostrarPresupuestos() {
           <div class="budget-progress">
             <div class="budget-progress-bar ${estado.exceeded ? "exceeded" : estado.warning ? "warning" : ""}" style="width:${Math.min(estado.percent, 100)}%"></div>
           </div>
-          <small>Gastado: $${estado.spent.toFixed(2)} / Presupuesto: $${estado.budgetAmount.toFixed(2)}</small>
+          <small>Gastado: ${formatMoney(spentVisible, displayCurrency)} / Presupuesto: ${formatMoney(budgetVisible, displayCurrency)}</small>
         </div>
         <div>
           <div>${estado.percent.toFixed(0)}%</div>
@@ -296,21 +372,21 @@ function mostrarAlertasPresupuesto() {
 }
 
 function actualizarResumen() {
-  const totalIncome = transactions
+  const totalIncomeVES = transactions
     .filter(t => t.type === "ingreso")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amountVES, 0);
 
-  const totalExpense = transactions
+  const totalExpenseVES = transactions
     .filter(t => t.type === "gasto")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amountVES, 0);
 
-  const balance = totalIncome - totalExpense;
-  const totalBudget = Object.values(budgets).reduce((sum, n) => sum + n, 0);
-  const budgetUsed = totalBudget > 0 ? (totalExpense / totalBudget) * 100 : 0;
+  const balanceVES = totalIncomeVES - totalExpenseVES;
+  const totalBudgetVES = Object.values(budgets).reduce((sum, n) => sum + n, 0);
+  const budgetUsed = totalBudgetVES > 0 ? (totalExpenseVES / totalBudgetVES) * 100 : 0;
 
-  document.getElementById("totalIncome").textContent = `$${totalIncome.toFixed(2)}`;
-  document.getElementById("totalExpense").textContent = `$${totalExpense.toFixed(2)}`;
-  document.getElementById("balance").textContent = `$${balance.toFixed(2)}`;
+  document.getElementById("totalIncome").textContent = formatMoney(convertFromVES(totalIncomeVES, displayCurrency), displayCurrency);
+  document.getElementById("totalExpense").textContent = formatMoney(convertFromVES(totalExpenseVES, displayCurrency), displayCurrency);
+  document.getElementById("balance").textContent = formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency);
   document.getElementById("budgetUsed").textContent = `${budgetUsed.toFixed(0)}%`;
 }
 
@@ -325,11 +401,11 @@ function actualizarGraficoGastos() {
   transactions
     .filter(t => t.type === "gasto")
     .forEach(t => {
-      gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amount;
+      gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
     });
 
   const labels = Object.keys(gastosPorCategoria).map(cat => `${categoryEmojis[cat]} ${categoryNames[cat]}`);
-  const data = Object.values(gastosPorCategoria);
+  const data = Object.values(gastosPorCategoria).map(valor => convertFromVES(valor, displayCurrency));
 
   const ctx = document.getElementById("gastosChart");
   if (!ctx) return;
@@ -353,13 +429,13 @@ function actualizarGraficoGastos() {
 }
 
 function actualizarGraficoBalance() {
-  const ingresos = transactions
+  const ingresosVES = transactions
     .filter(t => t.type === "ingreso")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amountVES, 0);
 
-  const gastos = transactions
+  const gastosVES = transactions
     .filter(t => t.type === "gasto")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + t.amountVES, 0);
 
   const ctx = document.getElementById("balanceChart");
   if (!ctx) return;
@@ -371,8 +447,11 @@ function actualizarGraficoBalance() {
     data: {
       labels: ["Ingresos", "Gastos"],
       datasets: [{
-        label: "Monto",
-        data: [ingresos, gastos],
+        label: `Monto en ${displayCurrency}`,
+        data: [
+          convertFromVES(ingresosVES, displayCurrency),
+          convertFromVES(gastosVES, displayCurrency)
+        ],
         backgroundColor: ["#10b981", "#ef4444"]
       }]
     },
@@ -403,13 +482,13 @@ function generarReporte() {
   }
 
   const delMes = transactions.filter(t => t.date.startsWith(month));
-  const ingresos = delMes.filter(t => t.type === "ingreso").reduce((s, t) => s + t.amount, 0);
-  const gastos = delMes.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
-  const balance = ingresos - gastos;
+  const ingresosVES = delMes.filter(t => t.type === "ingreso").reduce((s, t) => s + t.amountVES, 0);
+  const gastosVES = delMes.filter(t => t.type === "gasto").reduce((s, t) => s + t.amountVES, 0);
+  const balanceVES = ingresosVES - gastosVES;
 
   const gastosPorCategoria = {};
   delMes.filter(t => t.type === "gasto").forEach(t => {
-    gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amount;
+    gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
   });
 
   let topCategory = "Sin gastos";
@@ -428,15 +507,15 @@ function generarReporte() {
       <div class="report-item-details">
         <div>
           <div class="report-detail-label">Ingresos</div>
-          <div class="report-detail-value">$${ingresos.toFixed(2)}</div>
+          <div class="report-detail-value">${formatMoney(convertFromVES(ingresosVES, displayCurrency), displayCurrency)}</div>
         </div>
         <div>
           <div class="report-detail-label">Gastos</div>
-          <div class="report-detail-value">$${gastos.toFixed(2)}</div>
+          <div class="report-detail-value">${formatMoney(convertFromVES(gastosVES, displayCurrency), displayCurrency)}</div>
         </div>
         <div>
           <div class="report-detail-label">Balance</div>
-          <div class="report-detail-value">$${balance.toFixed(2)}</div>
+          <div class="report-detail-value">${formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency)}</div>
         </div>
         <div>
           <div class="report-detail-label">Mayor gasto</div>
@@ -454,9 +533,13 @@ function cambiarTab(tab) {
   document.getElementById(`tab-${tab}`).classList.add("active");
 
   const botones = document.querySelectorAll(".tab-btn");
-  if (tab === "transacciones") botones[0].classList.add("active");
-  if (tab === "graficos") botones[1].classList.add("active");
-  if (tab === "reportes") botones[2].classList.add("active");
+  const mapa = {
+    transacciones: 0,
+    graficos: 1,
+    reportes: 2,
+    configuracion: 3
+  };
+  botones[mapa[tab]].classList.add("active");
 
   if (tab === "graficos") {
     setTimeout(actualizarGraficos, 100);
@@ -474,6 +557,70 @@ function inicializarTema() {
   if (darkMode) document.body.classList.add("dark-mode");
 }
 
+function guardarConfiguracionMoneda() {
+  displayCurrency = document.getElementById("displayCurrency").value;
+  localStorage.setItem("displayCurrency", displayCurrency);
+  renderTodo();
+  generarReporteSiExiste();
+}
+
+function cargarConfiguracionMoneda() {
+  displayCurrency = localStorage.getItem("displayCurrency") || "VES";
+  const select = document.getElementById("displayCurrency");
+  if (select) select.value = displayCurrency;
+}
+
+function guardarTasas() {
+  const usd = parseFloat(document.getElementById("rateUSD").value);
+  const eur = parseFloat(document.getElementById("rateEUR").value);
+  const usdt = parseFloat(document.getElementById("rateUSDT").value);
+
+  if ([usd, eur, usdt].some(v => isNaN(v) || v <= 0)) {
+    alert("Ingresa tasas válidas mayores a 0.");
+    return;
+  }
+
+  exchangeRates.USD = usd;
+  exchangeRates.EUR = eur;
+  exchangeRates.USDT = usdt;
+
+  localStorage.setItem("exchangeRates", JSON.stringify(exchangeRates));
+  renderTodo();
+  generarReporteSiExiste();
+  alert("✅ Tasas guardadas correctamente.");
+}
+
+function cargarTasas() {
+  const saved = localStorage.getItem("exchangeRates");
+  if (!saved) return;
+
+  try {
+    const parsed = JSON.parse(saved);
+    exchangeRates = {
+      ...exchangeRates,
+      ...parsed,
+      VES: 1
+    };
+  } catch {
+    exchangeRates.VES = 1;
+  }
+}
+
+function pintarFormularioTasas() {
+  const rateUSD = document.getElementById("rateUSD");
+  const rateEUR = document.getElementById("rateEUR");
+  const rateUSDT = document.getElementById("rateUSDT");
+
+  if (rateUSD) rateUSD.value = exchangeRates.USD;
+  if (rateEUR) rateEUR.value = exchangeRates.EUR;
+  if (rateUSDT) rateUSDT.value = exchangeRates.USDT;
+}
+
+function generarReporteSiExiste() {
+  const month = document.getElementById("reportMonth").value;
+  if (month) generarReporte();
+}
+
 function guardarDatos() {
   localStorage.setItem("finanzasData", JSON.stringify({ transactions, budgets }));
 }
@@ -484,7 +631,13 @@ function cargarDatos() {
 
   try {
     const parsed = JSON.parse(datos);
-    transactions = parsed.transactions || [];
+    transactions = (parsed.transactions || []).map(t => ({
+      ...t,
+      amountOriginal: t.amountOriginal ?? t.amount ?? t.amountVES ?? 0,
+      currency: t.currency || "VES",
+      amountVES: t.amountVES ?? t.amount ?? 0,
+      notes: t.notes || ""
+    }));
     budgets = parsed.budgets || {};
   } catch {
     transactions = [];
@@ -496,6 +649,8 @@ function descargarDatos() {
   const datos = {
     transactions,
     budgets,
+    displayCurrency,
+    exchangeRates,
     exportadoEn: new Date().toISOString()
   };
 
@@ -503,9 +658,58 @@ function descargarDatos() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `finanzas_${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `finanzas_venezuela_${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportarCSV() {
+  if (transactions.length === 0) {
+    alert("No hay transacciones para exportar.");
+    return;
+  }
+
+  const encabezados = [
+    "id",
+    "descripcion",
+    "monto_original",
+    "moneda_original",
+    "monto_en_ves",
+    "categoria",
+    "tipo",
+    "fecha",
+    "notas"
+  ];
+
+  const filas = transactions.map(t => [
+    t.id,
+    escaparCSV(t.description),
+    t.amountOriginal,
+    t.currency,
+    t.amountVES,
+    t.category,
+    t.type,
+    t.date,
+    escaparCSV(t.notes || "")
+  ]);
+
+  const csv = [
+    encabezados.join(","),
+    ...filas.map(fila => fila.join(","))
+  ].join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `finanzas_venezuela_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function escaparCSV(valor) {
+  const texto = String(valor).replace(/"/g, '""');
+  return `"${texto}"`;
 }
 
 function limpiarDatos() {
@@ -523,11 +727,20 @@ function limpiarDatos() {
 }
 
 function formatearFecha(fecha) {
-  return new Date(fecha + "T00:00:00").toLocaleDateString("es-ES");
+  return new Date(fecha + "T00:00:00").toLocaleDateString("es-VE");
 }
 
 function formatearMes(valor) {
   const [year, month] = valor.split("-");
   const fecha = new Date(Number(year), Number(month) - 1, 1);
-  return fecha.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  return fecha.toLocaleDateString("es-VE", { month: "long", year: "numeric" });
+}
+
+function escapeHtml(texto) {
+  return String(texto)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
