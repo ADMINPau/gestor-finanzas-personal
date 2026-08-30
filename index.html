@@ -41,6 +41,25 @@
       </div>
     </section>
 
+    <section class="summary-section">
+      <div class="summary-card balance">
+        <h3>Meta de Ahorro</h3>
+        <p class="amount" id="savingGoalAmount">Bs 0,00</p>
+      </div>
+      <div class="summary-card income">
+        <h3>Ahorro Actual</h3>
+        <p class="amount" id="currentSavings">Bs 0,00</p>
+      </div>
+      <div class="summary-card expense">
+        <h3>Faltante</h3>
+        <p class="amount" id="remainingSavings">Bs 0,00</p>
+      </div>
+      <div class="summary-card budget">
+        <h3>Progreso</h3>
+        <p class="amount" id="savingsProgressText">0%</p>
+      </div>
+    </section>
+
     <div class="tabs">
       <button class="tab-btn active" onclick="cambiarTab('transacciones')">📋 Transacciones</button>
       <button class="tab-btn" onclick="cambiarTab('graficos')">📊 Gráficos</button>
@@ -58,12 +77,12 @@
 
               <div class="form-group">
                 <label for="description">Descripción:</label>
-                <input type="text" id="description" placeholder="Ej: Compra en supermercado" required />
+                <input type="text" id="description" required />
               </div>
 
               <div class="form-group">
                 <label for="amount">Cantidad:</label>
-                <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" required />
+                <input type="number" id="amount" step="0.01" min="0" required />
               </div>
 
               <div class="form-group">
@@ -78,17 +97,7 @@
 
               <div class="form-group">
                 <label for="category">Categoría:</label>
-                <select id="category" required>
-                  <option value="">Selecciona una categoría</option>
-                  <option value="alimentacion">🍔 Alimentación</option>
-                  <option value="transporte">🚗 Transporte</option>
-                  <option value="servicios">📱 Servicios</option>
-                  <option value="salud">🏥 Salud</option>
-                  <option value="entretenimiento">🎮 Entretenimiento</option>
-                  <option value="educacion">📚 Educación</option>
-                  <option value="trabajo">💼 Trabajo</option>
-                  <option value="otro">📌 Otro</option>
-                </select>
+                <select id="category" required></select>
               </div>
 
               <div class="form-group">
@@ -106,7 +115,7 @@
 
               <div class="form-group">
                 <label for="notes">Notas:</label>
-                <textarea id="notes" rows="4" placeholder="Ej: compra para la semana, pago móvil, efectivo, Binance, etc."></textarea>
+                <textarea id="notes" rows="4"></textarea>
               </div>
 
               <button type="submit" class="btn btn-primary" id="submitTransactionBtn">Agregar Transacción</button>
@@ -115,47 +124,60 @@
           </section>
 
           <section class="form-section">
+            <h2>🏷️ Categorías personalizadas</h2>
+            <form id="categoryForm">
+              <div class="form-group">
+                <label for="newCategoryName">Nombre de la categoría:</label>
+                <input type="text" id="newCategoryName" placeholder="Ej: mascotas" required />
+              </div>
+              <div class="form-group">
+                <label for="newCategoryEmoji">Emoji:</label>
+                <input type="text" id="newCategoryEmoji" placeholder="🐶" maxlength="4" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Agregar Categoría</button>
+            </form>
+            <div id="customCategoriesList" class="budgets-list" style="margin-top: 15px;"></div>
+          </section>
+
+          <section class="form-section">
             <h2>💼 Establecer Presupuesto</h2>
             <form id="budgetForm">
               <div class="form-group">
                 <label for="budgetCategory">Categoría:</label>
-                <select id="budgetCategory" required>
-                  <option value="">Selecciona una categoría</option>
-                  <option value="alimentacion">🍔 Alimentación</option>
-                  <option value="transporte">🚗 Transporte</option>
-                  <option value="servicios">📱 Servicios</option>
-                  <option value="salud">🏥 Salud</option>
-                  <option value="entretenimiento">🎮 Entretenimiento</option>
-                  <option value="educacion">📚 Educación</option>
-                  <option value="trabajo">💼 Trabajo</option>
-                  <option value="otro">📌 Otro</option>
-                </select>
+                <select id="budgetCategory" required></select>
               </div>
 
               <div class="form-group">
                 <label for="budgetAmount">Monto Máximo (en VES):</label>
-                <input type="number" id="budgetAmount" placeholder="0.00" step="0.01" min="0" required />
+                <input type="number" id="budgetAmount" step="0.01" min="0" required />
               </div>
 
               <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
             </form>
+          </section>
+
+          <section class="form-section">
+            <h2>🎯 Meta de ahorro</h2>
+            <form id="savingGoalForm">
+              <div class="form-group">
+                <label for="savingGoalInput">Objetivo (en VES):</label>
+                <input type="number" id="savingGoalInput" step="0.01" min="0" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Guardar Meta</button>
+            </form>
+
+            <div style="margin-top: 15px;">
+              <div class="budget-progress">
+                <div id="savingGoalBar" class="budget-progress-bar" style="width: 0%"></div>
+              </div>
+            </div>
           </section>
         </aside>
 
         <main class="content">
           <div class="filters">
             <input type="text" id="filterText" placeholder="Buscar..." class="filter-input" />
-            <select id="filterCategory" class="filter-input">
-              <option value="">Todas las categorías</option>
-              <option value="alimentacion">🍔 Alimentación</option>
-              <option value="transporte">🚗 Transporte</option>
-              <option value="servicios">📱 Servicios</option>
-              <option value="salud">🏥 Salud</option>
-              <option value="entretenimiento">🎮 Entretenimiento</option>
-              <option value="educacion">📚 Educación</option>
-              <option value="trabajo">💼 Trabajo</option>
-              <option value="otro">📌 Otro</option>
-            </select>
+            <select id="filterCategory" class="filter-input"></select>
             <select id="filterType" class="filter-input">
               <option value="">Todos los tipos</option>
               <option value="gasto">💸 Gastos</option>
@@ -233,32 +255,19 @@
 
         <div class="rate-card">
           <h3>Tasas simuladas contra VES</h3>
-
           <div class="form-group">
             <label for="rateUSD">1 USD = ? VES</label>
             <input type="number" id="rateUSD" step="0.01" min="0" />
           </div>
-
           <div class="form-group">
             <label for="rateEUR">1 EUR = ? VES</label>
             <input type="number" id="rateEUR" step="0.01" min="0" />
           </div>
-
           <div class="form-group">
             <label for="rateUSDT">1 USDT = ? VES</label>
             <input type="number" id="rateUSDT" step="0.01" min="0" />
           </div>
-
           <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas</button>
-        </div>
-
-        <div class="rate-card">
-          <h3>Referencia</h3>
-          <p class="empty-message">
-            USD y EUR están marcados como BCV simulado.<br />
-            USDT está marcado como Binance simulado.<br />
-            Todo se guarda en tu navegador.
-          </p>
         </div>
       </section>
     </div>
