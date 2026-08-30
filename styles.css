@@ -145,7 +145,8 @@ body {
 .form-section,
 .list-section,
 .chart-section,
-.report-section {
+.report-section,
+.rate-card {
   background: var(--card-background);
   padding: 20px;
   border-radius: var(--radius);
@@ -155,7 +156,8 @@ body {
 .form-section h2,
 .list-section h2,
 .chart-section h2,
-.report-section h2 {
+.report-section h2,
+.rate-card h3 {
   margin-bottom: 15px;
 }
 
@@ -256,7 +258,8 @@ body {
 
 .transaction-item,
 .budget-item,
-.report-item {
+.report-item,
+.custom-category-item {
   background: rgba(0,0,0,0.03);
   border-radius: var(--radius);
   padding: 14px;
@@ -264,7 +267,10 @@ body {
 
 body.dark-mode .transaction-item,
 body.dark-mode .budget-item,
-body.dark-mode .report-item {
+body.dark-mode .report-item,
+body.dark-mode .rate-card,
+body.dark-mode .custom-category-item,
+body.dark-mode .conversion-box {
   background: rgba(255,255,255,0.05);
 }
 
@@ -294,7 +300,10 @@ body.dark-mode .report-item {
 
 .transaction-description,
 .transaction-date,
-.transaction-notes {
+.transaction-notes,
+.transaction-original,
+.conversion-source,
+.config-help {
   color: var(--text-secondary);
   font-size: 0.92rem;
 }
@@ -302,6 +311,10 @@ body.dark-mode .report-item {
 .transaction-notes {
   margin-top: 6px;
   white-space: pre-wrap;
+}
+
+.transaction-original {
+  margin-top: 4px;
 }
 
 .transaction-amount {
@@ -398,7 +411,8 @@ body.dark-mode .alert-box.danger {
   padding: 20px;
 }
 
-.report-item-details {
+.report-item-details,
+.saving-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
@@ -413,6 +427,48 @@ body.dark-mode .alert-box.danger {
 .report-detail-value {
   font-size: 1.1rem;
   font-weight: bold;
+}
+
+.custom-category-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.custom-category-name {
+  font-weight: bold;
+}
+
+.conversion-box {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.conversion-box h3 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.conversion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.conversion-item {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: rgba(0,0,0,0.03);
+  font-size: 0.94rem;
+}
+
+body.dark-mode .conversion-item {
+  background: rgba(255,255,255,0.05);
 }
 
 @media (max-width: 950px) {
