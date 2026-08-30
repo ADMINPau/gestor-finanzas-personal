@@ -86,13 +86,21 @@
               </div>
 
               <div class="form-group">
-                <label for="transactionCurrency">Moneda:</label>
+                <label for="transactionCurrency">Moneda de la transacción:</label>
                 <select id="transactionCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
                   <option value="USD">Dólar BCV (simulado)</option>
                   <option value="EUR">Euro BCV (simulado)</option>
                   <option value="USDT">USDT Binance (simulado)</option>
                 </select>
+              </div>
+
+              <div class="conversion-box">
+                <h3>💱 Equivalencias en vivo</h3>
+                <p id="conversionSource" class="conversion-source">Fuente: —</p>
+                <div id="liveConversionList" class="conversion-list">
+                  <p class="empty-message">Ingresa un monto para ver conversiones</p>
+                </div>
               </div>
 
               <div class="form-group">
@@ -148,8 +156,18 @@
               </div>
 
               <div class="form-group">
-                <label for="budgetAmount">Monto Máximo (en VES):</label>
+                <label for="budgetAmount">Monto:</label>
                 <input type="number" id="budgetAmount" step="0.01" min="0" required />
+              </div>
+
+              <div class="form-group">
+                <label for="budgetCurrency">Moneda del presupuesto:</label>
+                <select id="budgetCurrency" required>
+                  <option value="VES">Bolívar (VES)</option>
+                  <option value="USD">Dólar BCV (simulado)</option>
+                  <option value="EUR">Euro BCV (simulado)</option>
+                  <option value="USDT">USDT Binance (simulado)</option>
+                </select>
               </div>
 
               <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
@@ -160,9 +178,20 @@
             <h2>🎯 Meta de ahorro</h2>
             <form id="savingGoalForm">
               <div class="form-group">
-                <label for="savingGoalInput">Objetivo (en VES):</label>
+                <label for="savingGoalInput">Objetivo:</label>
                 <input type="number" id="savingGoalInput" step="0.01" min="0" required />
               </div>
+
+              <div class="form-group">
+                <label for="savingGoalCurrency">Moneda de la meta:</label>
+                <select id="savingGoalCurrency" required>
+                  <option value="VES">Bolívar (VES)</option>
+                  <option value="USD">Dólar BCV (simulado)</option>
+                  <option value="EUR">Euro BCV (simulado)</option>
+                  <option value="USDT">USDT Binance (simulado)</option>
+                </select>
+              </div>
+
               <button type="submit" class="btn btn-primary">Guardar Meta</button>
             </form>
 
@@ -213,7 +242,7 @@
           </div>
         </section>
         <section class="chart-section">
-          <h2>💰 Ingresos vs Gastos (en VES)</h2>
+          <h2>💰 Ingresos vs Gastos</h2>
           <div class="chart-wrapper">
             <canvas id="balanceChart"></canvas>
           </div>
@@ -243,7 +272,7 @@
         <div class="rate-card">
           <h3>Moneda de visualización</h3>
           <div class="form-group">
-            <label for="displayCurrency">Mostrar totales en:</label>
+            <label for="displayCurrency">Mostrar toda la app en:</label>
             <select id="displayCurrency" class="filter-input" onchange="guardarConfiguracionMoneda()">
               <option value="VES">VES</option>
               <option value="USD">USD</option>
@@ -254,7 +283,7 @@
         </div>
 
         <div class="rate-card">
-          <h3>Tasas simuladas contra VES</h3>
+          <h3>USD y EUR — referencia BCV simulada</h3>
           <div class="form-group">
             <label for="rateUSD">1 USD = ? VES</label>
             <input type="number" id="rateUSD" step="0.01" min="0" />
@@ -263,11 +292,21 @@
             <label for="rateEUR">1 EUR = ? VES</label>
             <input type="number" id="rateEUR" step="0.01" min="0" />
           </div>
+        </div>
+
+        <div class="rate-card">
+          <h3>USDT — referencia Binance simulada</h3>
           <div class="form-group">
             <label for="rateUSDT">1 USDT = ? VES</label>
             <input type="number" id="rateUSDT" step="0.01" min="0" />
           </div>
+        </div>
+
+        <div class="rate-card">
           <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas</button>
+          <p class="config-help">
+            Todo se guarda en el navegador. USD y EUR usan BCV simulado. USDT usa Binance simulado.
+          </p>
         </div>
       </section>
     </div>
