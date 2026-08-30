@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gestor de Finanzas Personal</title>
+  <title>Gestor de Finanzas Personal - Venezuela</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -12,11 +12,12 @@
     <header class="header">
       <div>
         <h1>💰 Gestor de Finanzas Personal</h1>
-        <p class="subtitle">Controla tus gastos, ingresos y presupuestos</p>
+        <p class="subtitle">Versión Venezuela: VES, USD BCV, EUR BCV y USDT</p>
       </div>
       <div class="header-buttons">
         <button class="btn btn-secondary" onclick="toggleDarkMode()">🌙 Tema</button>
-        <button class="btn btn-secondary" onclick="descargarDatos()">📥 Descargar</button>
+        <button class="btn btn-secondary" onclick="descargarDatos()">📥 JSON</button>
+        <button class="btn btn-secondary" onclick="exportarCSV()">📄 CSV</button>
         <button class="btn btn-secondary" onclick="limpiarDatos()">🗑️ Limpiar</button>
       </div>
     </header>
@@ -24,15 +25,15 @@
     <section class="summary-section">
       <div class="summary-card income">
         <h3>Ingresos Totales</h3>
-        <p class="amount" id="totalIncome">$0.00</p>
+        <p class="amount" id="totalIncome">Bs 0,00</p>
       </div>
       <div class="summary-card expense">
         <h3>Gastos Totales</h3>
-        <p class="amount" id="totalExpense">$0.00</p>
+        <p class="amount" id="totalExpense">Bs 0,00</p>
       </div>
       <div class="summary-card balance">
         <h3>Balance</h3>
-        <p class="amount" id="balance">$0.00</p>
+        <p class="amount" id="balance">Bs 0,00</p>
       </div>
       <div class="summary-card budget">
         <h3>Presupuesto Usado</h3>
@@ -44,6 +45,7 @@
       <button class="tab-btn active" onclick="cambiarTab('transacciones')">📋 Transacciones</button>
       <button class="tab-btn" onclick="cambiarTab('graficos')">📊 Gráficos</button>
       <button class="tab-btn" onclick="cambiarTab('reportes')">📈 Reportes</button>
+      <button class="tab-btn" onclick="cambiarTab('configuracion')">⚙️ Configuración</button>
     </div>
 
     <div id="tab-transacciones" class="tab-content active">
@@ -53,14 +55,27 @@
             <h2 id="transactionFormTitle">➕ Nueva Transacción</h2>
             <form id="transactionForm">
               <input type="hidden" id="transactionId" />
+
               <div class="form-group">
                 <label for="description">Descripción:</label>
                 <input type="text" id="description" placeholder="Ej: Compra en supermercado" required />
               </div>
+
               <div class="form-group">
                 <label for="amount">Cantidad:</label>
                 <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" required />
               </div>
+
+              <div class="form-group">
+                <label for="transactionCurrency">Moneda:</label>
+                <select id="transactionCurrency" required>
+                  <option value="VES">Bolívar (VES)</option>
+                  <option value="USD">Dólar BCV (simulado)</option>
+                  <option value="EUR">Euro BCV (simulado)</option>
+                  <option value="USDT">USDT Binance (simulado)</option>
+                </select>
+              </div>
+
               <div class="form-group">
                 <label for="category">Categoría:</label>
                 <select id="category" required>
@@ -75,6 +90,7 @@
                   <option value="otro">📌 Otro</option>
                 </select>
               </div>
+
               <div class="form-group">
                 <label for="type">Tipo:</label>
                 <select id="type" required>
@@ -82,10 +98,17 @@
                   <option value="ingreso">💵 Ingreso</option>
                 </select>
               </div>
+
               <div class="form-group">
                 <label for="date">Fecha:</label>
                 <input type="date" id="date" required />
               </div>
+
+              <div class="form-group">
+                <label for="notes">Notas:</label>
+                <textarea id="notes" rows="4" placeholder="Ej: compra para la semana, pago móvil, efectivo, Binance, etc."></textarea>
+              </div>
+
               <button type="submit" class="btn btn-primary" id="submitTransactionBtn">Agregar Transacción</button>
               <button type="button" class="btn btn-secondary full-width hidden" id="cancelEditBtn" onclick="cancelarEdicion()">Cancelar edición</button>
             </form>
@@ -108,10 +131,12 @@
                   <option value="otro">📌 Otro</option>
                 </select>
               </div>
+
               <div class="form-group">
-                <label for="budgetAmount">Monto Máximo:</label>
+                <label for="budgetAmount">Monto Máximo (en VES):</label>
                 <input type="number" id="budgetAmount" placeholder="0.00" step="0.01" min="0" required />
               </div>
+
               <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
             </form>
           </section>
@@ -166,7 +191,7 @@
           </div>
         </section>
         <section class="chart-section">
-          <h2>💰 Ingresos vs Gastos</h2>
+          <h2>💰 Ingresos vs Gastos (en VES)</h2>
           <div class="chart-wrapper">
             <canvas id="balanceChart"></canvas>
           </div>
@@ -185,6 +210,55 @@
         </div>
         <div id="reportContent" class="report-content">
           <p class="empty-message">Selecciona un mes para ver el reporte</p>
+        </div>
+      </section>
+    </div>
+
+    <div id="tab-configuracion" class="tab-content">
+      <section class="report-section">
+        <h2>⚙️ Configuración de Monedas</h2>
+
+        <div class="rate-card">
+          <h3>Moneda de visualización</h3>
+          <div class="form-group">
+            <label for="displayCurrency">Mostrar totales en:</label>
+            <select id="displayCurrency" class="filter-input" onchange="guardarConfiguracionMoneda()">
+              <option value="VES">VES</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="USDT">USDT</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="rate-card">
+          <h3>Tasas simuladas contra VES</h3>
+
+          <div class="form-group">
+            <label for="rateUSD">1 USD = ? VES</label>
+            <input type="number" id="rateUSD" step="0.01" min="0" />
+          </div>
+
+          <div class="form-group">
+            <label for="rateEUR">1 EUR = ? VES</label>
+            <input type="number" id="rateEUR" step="0.01" min="0" />
+          </div>
+
+          <div class="form-group">
+            <label for="rateUSDT">1 USDT = ? VES</label>
+            <input type="number" id="rateUSDT" step="0.01" min="0" />
+          </div>
+
+          <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas</button>
+        </div>
+
+        <div class="rate-card">
+          <h3>Referencia</h3>
+          <p class="empty-message">
+            USD y EUR están marcados como BCV simulado.<br />
+            USDT está marcado como Binance simulado.<br />
+            Todo se guarda en tu navegador.
+          </p>
         </div>
       </section>
     </div>
