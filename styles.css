@@ -4,13 +4,14 @@
   --success-color: #10b981;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
+  --warning-soft: #fef3c7;
+  --danger-soft: #fee2e2;
   --background-color: #f3f4f6;
   --card-background: #ffffff;
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
   --border-color: #e5e7eb;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
   --radius: 8px;
   --transition: all 0.3s ease;
 }
@@ -21,12 +22,14 @@ body.dark-mode {
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
   --border-color: #334155;
+  --warning-soft: rgba(245, 158, 11, 0.15);
+  --danger-soft: rgba(239, 68, 68, 0.15);
 }
 
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 body {
@@ -208,14 +211,33 @@ body {
   color: white;
 }
 
+.filter-reset-btn {
+  width: auto;
+  background: var(--text-secondary);
+}
+
 .btn-danger {
   background: var(--danger-color);
+  color: white;
+}
+
+.btn-warning {
+  background: var(--warning-color);
   color: white;
 }
 
 .btn-small {
   padding: 6px 10px;
   font-size: 0.85rem;
+}
+
+.full-width {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.hidden {
+  display: none;
 }
 
 .budgets-list,
@@ -282,6 +304,20 @@ body.dark-mode .report-item {
   color: var(--success-color);
 }
 
+.transaction-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.budget-item.alerta {
+  border-left: 4px solid var(--warning-color);
+}
+
+.budget-item.excedido {
+  border-left: 4px solid var(--danger-color);
+}
+
 .budget-progress {
   width: 100%;
   height: 10px;
@@ -300,8 +336,37 @@ body.dark-mode .budget-progress {
   background: linear-gradient(90deg, var(--success-color), var(--warning-color));
 }
 
+.budget-progress-bar.warning {
+  background: var(--warning-color);
+}
+
 .budget-progress-bar.exceeded {
   background: var(--danger-color);
+}
+
+.alert-box {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.alert-box.warning {
+  background: var(--warning-soft);
+  color: #92400e;
+}
+
+.alert-box.danger {
+  background: var(--danger-soft);
+  color: #991b1b;
+}
+
+body.dark-mode .alert-box.warning {
+  color: #fcd34d;
+}
+
+body.dark-mode .alert-box.danger {
+  color: #fca5a5;
 }
 
 .charts-container {
@@ -353,5 +418,9 @@ body.dark-mode .budget-progress {
   .transaction-item {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .transaction-actions {
+    width: 100%;
   }
 }
