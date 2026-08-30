@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Finanzas Personal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>💰 Gestor de Finanzas Personal</h1>
+                <p class="subtitle">Controla tus gastos, ingresos y presupuestos</p>
+            </div>
+            <div class="header-buttons">
+                <button class="btn btn-secondary" onclick="descargarDatos()">📥 Descargar</button>
+                <button class="btn btn-secondary" onclick="limpiarDatos()">🗑️ Limpiar</button>
+            </div>
+        </header>
+
+        <section class="summary-section">
+            <div class="summary-card income">
+                <h3>Ingresos Totales</h3>
+                <p class="amount" id="totalIncome">$0.00</p>
+            </div>
+            <div class="summary-card expense">
+                <h3>Gastos Totales</h3>
+                <p class="amount" id="totalExpense">$0.00</p>
+            </div>
+            <div class="summary-card balance">
+                <h3>Balance</h3>
+                <p class="amount" id="balance">$0.00</p>
+            </div>
+            <div class="summary-card budget">
+                <h3>Presupuesto Usado</h3>
+                <p class="amount" id="budgetUsed">0%</p>
+            </div>
+        </section>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <section class="form-section">
+                    <h2>➕ Nueva Transacción</h2>
+                    <form id="transactionForm">
+                        <div class="form-group">
+                            <label for="description">Descripción:</label>
+                            <input type="text" id="description" placeholder="Ej: Compra en supermercado" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="amount">Cantidad:</label>
+                            <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="category">Categoría:</label>
+                            <select id="category" required>
+                                <option value="">Selecciona una categoría</option>
+                                <option value="alimentacion">🍔 Alimentación</option>
+                                <option value="transporte">🚗 Transporte</option>
+                                <option value="servicios">📱 Servicios</option>
+                                <option value="salud">🏥 Salud</option>
+                                <option value="entretenimiento">🎮 Entretenimiento</option>
+                                <option value="educacion">📚 Educación</option>
+                                <option value="trabajo">💼 Trabajo</option>
+                                <option value="otro">📌 Otro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="type">Tipo:</label>
+                            <select id="type" required>
+                                <option value="gasto">💸 Gasto</option>
+                                <option value="ingreso">💵 Ingreso</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="date">Fecha:</label>
+                            <input type="date" id="date" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Agregar Transacción</button>
+                    </form>
+                </section>
+
+                <section class="form-section">
+                    <h2>💼 Establecer Presupuesto</h2>
+                    <form id="budgetForm">
+                        <div class="form-group">
+                            <label for="budgetCategory">Categoría:</label>
+                            <select id="budgetCategory" required>
+                                <option value="">Selecciona una categoría</option>
+                                <option value="alimentacion">🍔 Alimentación</option>
+                                <option value="transporte">🚗 Transporte</option>
+                                <option value="servicios">📱 Servicios</option>
+                                <option value="salud">🏥 Salud</option>
+                                <option value="entretenimiento">🎮 Entretenimiento</option>
+                                <option value="educacion">📚 Educación</option>
+                                <option value="trabajo">💼 Trabajo</option>
+                                <option value="otro">📌 Otro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="budgetAmount">Monto Máximo:</label>
+                            <input type="number" id="budgetAmount" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
+                    </form>
+                </section>
+            </aside>
+
+            <main class="content">
+                <div class="filters">
+                    <input type="text" id="filterText" placeholder="Buscar..." class="filter-input">
+                    <select id="filterCategory" class="filter-input">
+                        <option value="">Todas las categorías</option>
+                        <option value="alimentacion">🍔 Alimentación</option>
+                        <option value="transporte">🚗 Transporte</option>
+                        <option value="servicios">📱 Servicios</option>
+                        <option value="salud">🏥 Salud</option>
+                        <option value="entretenimiento">🎮 Entretenimiento</option>
+                        <option value="educacion">📚 Educación</option>
+                        <option value="trabajo">💼 Trabajo</option>
+                        <option value="otro">📌 Otro</option>
+                    </select>
+                    <select id="filterType" class="filter-input">
+                        <option value="">Todos los tipos</option>
+                        <option value="gasto">💸 Gastos</option>
+                        <option value="ingreso">💵 Ingresos</option>
+                    </select>
+                </div>
+
+                <section class="list-section">
+                    <h2>💼 Presupuestos por Categoría</h2>
+                    <div id="budgetsList" class="budgets-list">
+                        <p class="empty-message">No hay presupuestos establecidos</p>
+                    </div>
+                </section>
+
+                <section class="list-section">
+                    <h2>📋 Transacciones</h2>
+                    <div id="transactionsList" class="transactions-list">
+                        <p class="empty-message">No hay transacciones registradas</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
