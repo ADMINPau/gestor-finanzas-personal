@@ -50,8 +50,9 @@
       <div class="main-content">
         <aside class="sidebar">
           <section class="form-section">
-            <h2>➕ Nueva Transacción</h2>
+            <h2 id="transactionFormTitle">➕ Nueva Transacción</h2>
             <form id="transactionForm">
+              <input type="hidden" id="transactionId" />
               <div class="form-group">
                 <label for="description">Descripción:</label>
                 <input type="text" id="description" placeholder="Ej: Compra en supermercado" required />
@@ -85,7 +86,8 @@
                 <label for="date">Fecha:</label>
                 <input type="date" id="date" required />
               </div>
-              <button type="submit" class="btn btn-primary">Agregar Transacción</button>
+              <button type="submit" class="btn btn-primary" id="submitTransactionBtn">Agregar Transacción</button>
+              <button type="button" class="btn btn-secondary full-width hidden" id="cancelEditBtn" onclick="cancelarEdicion()">Cancelar edición</button>
             </form>
           </section>
 
@@ -134,10 +136,12 @@
               <option value="gasto">💸 Gastos</option>
               <option value="ingreso">💵 Ingresos</option>
             </select>
+            <button class="btn btn-secondary filter-reset-btn" onclick="reiniciarFiltros()">Reiniciar filtros</button>
           </div>
 
           <section class="list-section">
             <h2>💼 Presupuestos por Categoría</h2>
+            <div id="budgetAlerts"></div>
             <div id="budgetsList" class="budgets-list">
               <p class="empty-message">No hay presupuestos establecidos</p>
             </div>
