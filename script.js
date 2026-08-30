@@ -3,12 +3,24 @@ let budgets = {};
 let gastosChart = null;
 let balanceChart = null;
 let displayCurrency = "VES";
+let savingGoal = 0;
 
 let exchangeRates = {
   VES: 1,
   USD: 36.5,
   EUR: 39.8,
   USDT: 37.1
+};
+
+let categories = {
+  alimentacion: { name: "Alimentación", emoji: "🍔", custom: false },
+  transporte: { name: "Transporte", emoji: "🚗", custom: false },
+  servicios: { name: "Servicios", emoji: "📱", custom: false },
+  salud: { name: "Salud", emoji: "🏥", custom: false },
+  entretenimiento: { name: "Entretenimiento", emoji: "🎮", custom: false },
+  educacion: { name: "Educación", emoji: "📚", custom: false },
+  trabajo: { name: "Trabajo", emoji: "💼", custom: false },
+  otro: { name: "Otro", emoji: "📌", custom: false }
 };
 
 const currencyLabels = {
@@ -18,35 +30,16 @@ const currencyLabels = {
   USDT: "USDT Binance (simulado)"
 };
 
-const categoryEmojis = {
-  alimentacion: "🍔",
-  transporte: "🚗",
-  servicios: "📱",
-  salud: "🏥",
-  entretenimiento: "🎮",
-  educacion: "📚",
-  trabajo: "💼",
-  otro: "📌"
-};
-
-const categoryNames = {
-  alimentacion: "Alimentación",
-  transporte: "Transporte",
-  servicios: "Servicios",
-  salud: "Salud",
-  entretenimiento: "Entretenimiento",
-  educacion: "Educación",
-  trabajo: "Trabajo",
-  otro: "Otro"
-};
-
 document.addEventListener("DOMContentLoaded", () => {
   cargarDatos();
   cargarTasas();
   cargarConfiguracionMoneda();
+  cargarCategorias();
+  cargarMetaAhorro();
   inicializarTema();
   configurarFecha();
   inicializarEventos();
+  llenarSelectsCategorias();
   llenarMesesReporte();
   pintarFormularioTasas();
   renderTodo();
@@ -60,16 +53,21 @@ function configurarFecha() {
 function inicializarEventos() {
   document.getElementById("transactionForm").addEventListener("submit", guardarTransaccion);
   document.getElementById("budgetForm").addEventListener("submit", agregarPresupuesto);
+  document.getElementById("categoryForm").addEventListener("submit", agregarCategoriaPersonalizada);
+  document.getElementById("savingGoalForm").addEventListener("submit", guardarMetaAhorro);
   document.getElementById("filterText").addEventListener("input", filtrarTransacciones);
   document.getElementById("filterCategory").addEventListener("change", filtrarTransacciones);
   document.getElementById("filterType").addEventListener("change", filtrarTransacciones);
 }
 
 function renderTodo() {
+  llenarSelectsCategorias();
+  renderCategoriasPersonalizadas();
   mostrarTransacciones();
   mostrarPresupuestos();
   mostrarAlertasPresupuesto();
   actualizarResumen();
+  actualizarResumenAhorro();
   actualizarGraficos();
 }
 
@@ -81,9 +79,7 @@ function formatMoney(value, currency = displayCurrency) {
     USDT: "en-US"
   };
 
-  if (currency === "USDT") {
-    return `${Number(value).toFixed(2)} USDT`;
-  }
+  if (currency === "USDT") return `${Number(value).toFixed(2)} USDT`;
 
   try {
     return new Intl.NumberFormat(localeMap[currency] || "es-VE", {
@@ -105,6 +101,120 @@ function convertFromVES(amountVES, currency) {
   return amountVES / (exchangeRates[currency] || 1);
 }
 
+function getCategoryName(key) {
+  return categories[key]?.name || key;
+}
+
+function getCategoryEmoji(key) {
+  return categories[key]?.emoji || "📁";
+}
+
+function llenarSelectsCategorias() {
+  const categoryOptions = Object.entries(categories)
+    .map(([key, value]) => `<option value="${key}">${value.emoji} ${value.name}</option>`)
+    .join("");
+
+  const transactionSelect = document.getElementById("category");
+  const budgetSelect = document.getElementById("budgetCategory");
+  const filterSelect = document.getElementById("filterCategory");
+
+  if (transactionSelect) {
+    const current = transactionSelect.value;
+    transactionSelect.innerHTML = `<option value="">Selecciona una categoría</option>${categoryOptions}`;
+    if (current && categories[current]) transactionSelect.value = current;
+  }
+
+  if (budgetSelect) {
+    const current = budgetSelect.value;
+    budgetSelect.innerHTML = `<option value="">Selecciona una categoría</option>${categoryOptions}`;
+    if (current && categories[current]) budgetSelect.value = current;
+  }
+
+  if (filterSelect) {
+    const current = filterSelect.value;
+    filterSelect.innerHTML = `<option value="">Todas las categorías</option>${categoryOptions}`;
+    if (current && categories[current]) filterSelect.value = current;
+  }
+}
+
+function agregarCategoriaPersonalizada(e) {
+  e.preventDefault();
+
+  const name = document.getElementById("newCategoryName").value.trim();
+  const emoji = document.getElementById("newCategoryEmoji").value.trim();
+  const key = normalizarClaveCategoria(name);
+
+  if (!name || !emoji) {
+    alert("Completa el nombre y el emoji.");
+    return;
+  }
+
+  if (categories[key]) {
+    alert("Ya existe una categoría con ese nombre.");
+    return;
+  }
+
+  categories[key] = {
+    name,
+    emoji,
+    custom: true
+  };
+
+  guardarCategorias();
+  document.getElementById("categoryForm").reset();
+  renderTodo();
+  alert("✅ Categoría agregada.");
+}
+
+function eliminarCategoriaPersonalizada(key) {
+  if (!categories[key] || !categories[key].custom) return;
+
+  const usadaEnTransacciones = transactions.some(t => t.category === key);
+  const usadaEnPresupuestos = Object.prototype.hasOwnProperty.call(budgets, key);
+
+  if (usadaEnTransacciones || usadaEnPresupuestos) {
+    alert("No puedes eliminar esta categoría porque ya está en uso.");
+    return;
+  }
+
+  if (!confirm("¿Deseas eliminar esta categoría personalizada?")) return;
+
+  delete categories[key];
+  guardarCategorias();
+  renderTodo();
+}
+
+function renderCategoriasPersonalizadas() {
+  const contenedor = document.getElementById("customCategoriesList");
+  if (!contenedor) return;
+
+  const personalizadas = Object.entries(categories).filter(([, value]) => value.custom);
+
+  if (personalizadas.length === 0) {
+    contenedor.innerHTML = '<p class="empty-message">No hay categorías personalizadas</p>';
+    return;
+  }
+
+  contenedor.innerHTML = personalizadas.map(([key, value]) => `
+    <div class="custom-category-item">
+      <div>
+        <div class="custom-category-name">${value.emoji} ${escapeHtml(value.name)}</div>
+        <div class="transaction-date">${key}</div>
+      </div>
+      <button class="btn btn-danger btn-small" onclick="eliminarCategoriaPersonalizada('${key}')">Eliminar</button>
+    </div>
+  `).join("");
+}
+
+function normalizarClaveCategoria(texto) {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 function guardarTransaccion(e) {
   e.preventDefault();
 
@@ -124,34 +234,24 @@ function guardarTransaccion(e) {
 
   const amountVES = convertToVES(amount, transactionCurrency);
 
+  const payload = {
+    description,
+    amountOriginal: amount,
+    currency: transactionCurrency,
+    amountVES,
+    category,
+    type,
+    date,
+    notes
+  };
+
   if (id) {
-    transactions = transactions.map(t =>
-      t.id === Number(id)
-        ? {
-            ...t,
-            description,
-            amountOriginal: amount,
-            currency: transactionCurrency,
-            amountVES,
-            category,
-            type,
-            date,
-            notes
-          }
-        : t
-    );
+    transactions = transactions.map(t => t.id === Number(id) ? { ...t, ...payload } : t);
     alert("✅ Transacción editada.");
   } else {
     transactions.push({
       id: Date.now(),
-      description,
-      amountOriginal: amount,
-      currency: transactionCurrency,
-      amountVES,
-      category,
-      type,
-      date,
-      notes
+      ...payload
     });
     alert("✅ Transacción agregada.");
   }
@@ -220,7 +320,7 @@ function mostrarTransacciones(listaPersonalizada = null) {
     return `
       <div class="transaction-item ${t.type}">
         <div class="transaction-info">
-          <div class="transaction-category">${categoryEmojis[t.category]} ${categoryNames[t.category]}</div>
+          <div class="transaction-category">${getCategoryEmoji(t.category)} ${escapeHtml(getCategoryName(t.category))}</div>
           <div class="transaction-description">${escapeHtml(t.description)}</div>
           <div class="transaction-date">${formatearFecha(t.date)}</div>
           <div class="transaction-original">
@@ -247,7 +347,7 @@ function filtrarTransacciones() {
 
   const filtradas = transactions
     .filter(t => {
-      const textoBase = `${t.description} ${t.notes || ""} ${categoryNames[t.category]} ${t.currency || ""}`.toLowerCase();
+      const textoBase = `${t.description} ${t.notes || ""} ${getCategoryName(t.category)} ${t.currency || ""}`.toLowerCase();
       const coincideTexto = textoBase.includes(texto);
       const coincideCategoria = !categoria || t.category === categoria;
       const coincideTipo = !tipo || t.type === tipo;
@@ -330,7 +430,7 @@ function mostrarPresupuestos() {
     return `
       <div class="budget-item ${estado.warning ? "alerta" : ""} ${estado.exceeded ? "excedido" : ""}">
         <div>
-          <div><strong>${categoryEmojis[category]} ${categoryNames[category]}</strong></div>
+          <div><strong>${getCategoryEmoji(category)} ${escapeHtml(getCategoryName(category))}</strong></div>
           <div class="budget-progress">
             <div class="budget-progress-bar ${estado.exceeded ? "exceeded" : estado.warning ? "warning" : ""}" style="width:${Math.min(estado.percent, 100)}%"></div>
           </div>
@@ -358,11 +458,11 @@ function mostrarAlertasPresupuesto() {
     const estado = obtenerEstadoPresupuesto(category);
 
     if (estado.exceeded) {
-      return `<div class="alert-box danger">🚨 Has superado el presupuesto de ${categoryNames[category]} (${estado.percent.toFixed(0)}%)</div>`;
+      return `<div class="alert-box danger">🚨 Has superado el presupuesto de ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
     }
 
     if (estado.warning) {
-      return `<div class="alert-box warning">⚠️ Estás cerca del límite en ${categoryNames[category]} (${estado.percent.toFixed(0)}%)</div>`;
+      return `<div class="alert-box warning">⚠️ Estás cerca del límite en ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
     }
 
     return "";
@@ -390,6 +490,53 @@ function actualizarResumen() {
   document.getElementById("budgetUsed").textContent = `${budgetUsed.toFixed(0)}%`;
 }
 
+function actualizarResumenAhorro() {
+  const totalIncomeVES = transactions
+    .filter(t => t.type === "ingreso")
+    .reduce((sum, t) => sum + t.amountVES, 0);
+
+  const totalExpenseVES = transactions
+    .filter(t => t.type === "gasto")
+    .reduce((sum, t) => sum + t.amountVES, 0);
+
+  const ahorroActualVES = totalIncomeVES - totalExpenseVES;
+  const faltanteVES = Math.max(savingGoal - ahorroActualVES, 0);
+  const progress = savingGoal > 0 ? Math.min((ahorroActualVES / savingGoal) * 100, 100) : 0;
+
+  document.getElementById("savingGoalAmount").textContent = formatMoney(convertFromVES(savingGoal, displayCurrency), displayCurrency);
+  document.getElementById("currentSavings").textContent = formatMoney(convertFromVES(ahorroActualVES, displayCurrency), displayCurrency);
+  document.getElementById("remainingSavings").textContent = formatMoney(convertFromVES(faltanteVES, displayCurrency), displayCurrency);
+  document.getElementById("savingsProgressText").textContent = `${progress.toFixed(0)}%`;
+  document.getElementById("savingGoalBar").style.width = `${progress}%`;
+}
+
+function guardarMetaAhorro(e) {
+  e.preventDefault();
+  const value = parseFloat(document.getElementById("savingGoalInput").value);
+
+  if (isNaN(value) || value < 0) {
+    alert("Ingresa una meta válida.");
+    return;
+  }
+
+  savingGoal = value;
+  localStorage.setItem("savingGoal", JSON.stringify(savingGoal));
+  renderTodo();
+  alert("✅ Meta de ahorro guardada.");
+}
+
+function cargarMetaAhorro() {
+  const saved = localStorage.getItem("savingGoal");
+  if (!saved) return;
+  try {
+    savingGoal = JSON.parse(saved) || 0;
+    const input = document.getElementById("savingGoalInput");
+    if (input) input.value = savingGoal;
+  } catch {
+    savingGoal = 0;
+  }
+}
+
 function actualizarGraficos() {
   actualizarGraficoGastos();
   actualizarGraficoBalance();
@@ -404,12 +551,11 @@ function actualizarGraficoGastos() {
       gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
     });
 
-  const labels = Object.keys(gastosPorCategoria).map(cat => `${categoryEmojis[cat]} ${categoryNames[cat]}`);
+  const labels = Object.keys(gastosPorCategoria).map(cat => `${getCategoryEmoji(cat)} ${getCategoryName(cat)}`);
   const data = Object.values(gastosPorCategoria).map(valor => convertFromVES(valor, displayCurrency));
 
   const ctx = document.getElementById("gastosChart");
   if (!ctx) return;
-
   if (gastosChart) gastosChart.destroy();
 
   gastosChart = new Chart(ctx, {
@@ -418,7 +564,7 @@ function actualizarGraficoGastos() {
       labels,
       datasets: [{
         data,
-        backgroundColor: ["#6366f1", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#84cc16", "#f97316"]
+        backgroundColor: ["#6366f1", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#84cc16", "#f97316", "#14b8a6", "#e879f9"]
       }]
     },
     options: {
@@ -439,7 +585,6 @@ function actualizarGraficoBalance() {
 
   const ctx = document.getElementById("balanceChart");
   if (!ctx) return;
-
   if (balanceChart) balanceChart.destroy();
 
   balanceChart = new Chart(ctx, {
@@ -467,7 +612,6 @@ function llenarMesesReporte() {
   if (!select) return;
 
   const mesesUnicos = [...new Set(transactions.map(t => t.date.slice(0, 7)))].sort().reverse();
-
   select.innerHTML = '<option value="">Selecciona un mes</option>' +
     mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
 }
@@ -497,7 +641,7 @@ function generarReporte() {
   Object.entries(gastosPorCategoria).forEach(([cat, amount]) => {
     if (amount > topAmount) {
       topAmount = amount;
-      topCategory = `${categoryEmojis[cat]} ${categoryNames[cat]}`;
+      topCategory = `${getCategoryEmoji(cat)} ${getCategoryName(cat)}`;
     }
   });
 
@@ -533,23 +677,15 @@ function cambiarTab(tab) {
   document.getElementById(`tab-${tab}`).classList.add("active");
 
   const botones = document.querySelectorAll(".tab-btn");
-  const mapa = {
-    transacciones: 0,
-    graficos: 1,
-    reportes: 2,
-    configuracion: 3
-  };
+  const mapa = { transacciones: 0, graficos: 1, reportes: 2, configuracion: 3 };
   botones[mapa[tab]].classList.add("active");
 
-  if (tab === "graficos") {
-    setTimeout(actualizarGraficos, 100);
-  }
+  if (tab === "graficos") setTimeout(actualizarGraficos, 100);
 }
 
 function toggleDarkMode() {
   document.body.classList.toggle("dark-mode");
-  const activo = document.body.classList.contains("dark-mode");
-  localStorage.setItem("darkMode", JSON.stringify(activo));
+  localStorage.setItem("darkMode", JSON.stringify(document.body.classList.contains("dark-mode")));
 }
 
 function inicializarTema() {
@@ -596,24 +732,30 @@ function cargarTasas() {
 
   try {
     const parsed = JSON.parse(saved);
-    exchangeRates = {
-      ...exchangeRates,
-      ...parsed,
-      VES: 1
-    };
+    exchangeRates = { ...exchangeRates, ...parsed, VES: 1 };
   } catch {
     exchangeRates.VES = 1;
   }
 }
 
 function pintarFormularioTasas() {
-  const rateUSD = document.getElementById("rateUSD");
-  const rateEUR = document.getElementById("rateEUR");
-  const rateUSDT = document.getElementById("rateUSDT");
+  document.getElementById("rateUSD").value = exchangeRates.USD;
+  document.getElementById("rateEUR").value = exchangeRates.EUR;
+  document.getElementById("rateUSDT").value = exchangeRates.USDT;
+}
 
-  if (rateUSD) rateUSD.value = exchangeRates.USD;
-  if (rateEUR) rateEUR.value = exchangeRates.EUR;
-  if (rateUSDT) rateUSDT.value = exchangeRates.USDT;
+function guardarCategorias() {
+  localStorage.setItem("categories", JSON.stringify(categories));
+}
+
+function cargarCategorias() {
+  const saved = localStorage.getItem("categories");
+  if (!saved) return;
+
+  try {
+    const parsed = JSON.parse(saved);
+    categories = { ...categories, ...parsed };
+  } catch {}
 }
 
 function generarReporteSiExiste() {
@@ -651,6 +793,8 @@ function descargarDatos() {
     budgets,
     displayCurrency,
     exchangeRates,
+    categories,
+    savingGoal,
     exportadoEn: new Date().toISOString()
   };
 
@@ -670,15 +814,8 @@ function exportarCSV() {
   }
 
   const encabezados = [
-    "id",
-    "descripcion",
-    "monto_original",
-    "moneda_original",
-    "monto_en_ves",
-    "categoria",
-    "tipo",
-    "fecha",
-    "notas"
+    "id","descripcion","monto_original","moneda_original","monto_en_ves",
+    "categoria","tipo","fecha","notas"
   ];
 
   const filas = transactions.map(t => [
@@ -687,17 +824,13 @@ function exportarCSV() {
     t.amountOriginal,
     t.currency,
     t.amountVES,
-    t.category,
+    escaparCSV(getCategoryName(t.category)),
     t.type,
     t.date,
     escaparCSV(t.notes || "")
   ]);
 
-  const csv = [
-    encabezados.join(","),
-    ...filas.map(fila => fila.join(","))
-  ].join("\n");
-
+  const csv = [encabezados.join(","), ...filas.map(f => f.join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -718,12 +851,14 @@ function limpiarDatos() {
 
   transactions = [];
   budgets = {};
+  savingGoal = 0;
+  localStorage.removeItem("savingGoal");
   guardarDatos();
   limpiarFormularioTransaccion();
   llenarMesesReporte();
   renderTodo();
-  document.getElementById("reportContent").innerHTML =
-    '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
+  document.getElementById("savingGoalInput").value = "";
+  document.getElementById("reportContent").innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
 }
 
 function formatearFecha(fecha) {
