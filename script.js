@@ -30,6 +30,13 @@ const currencyLabels = {
   USDT: "USDT Binance (simulado)"
 };
 
+const currencySources = {
+  VES: "Moneda base",
+  USD: "BCV simulado",
+  EUR: "BCV simulado",
+  USDT: "Binance simulado"
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   cargarDatos();
   cargarTasas();
@@ -43,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
   llenarMesesReporte();
   pintarFormularioTasas();
   renderTodo();
+  actualizarVistaConversion();
 });
 
 function configurarFecha() {
@@ -58,6 +66,8 @@ function inicializarEventos() {
   document.getElementById("filterText").addEventListener("input", filtrarTransacciones);
   document.getElementById("filterCategory").addEventListener("change", filtrarTransacciones);
   document.getElementById("filterType").addEventListener("change", filtrarTransacciones);
+  document.getElementById("amount").addEventListener("input", actualizarVistaConversion);
+  document.getElementById("transactionCurrency").addEventListener("change", actualizarVistaConversion);
 }
 
 function renderTodo() {
@@ -69,6 +79,7 @@ function renderTodo() {
   actualizarResumen();
   actualizarResumenAhorro();
   actualizarGraficos();
+  actualizarVistaConversion();
 }
 
 function formatMoney(value, currency = displayCurrency) {
@@ -99,6 +110,56 @@ function convertToVES(amount, currency) {
 function convertFromVES(amountVES, currency) {
   if (currency === "VES") return amountVES;
   return amountVES / (exchangeRates[currency] || 1);
+}
+
+function actualizarVistaConversion() {
+  const amount = parseFloat(document.getElementById("amount")?.value || "0");
+  const currency = document.getElementById("transactionCurrency")?.value || "VES";
+  const sourceEl = document.getElementById("conversionSource");
+  const listEl = document.getElementById("liveConversionList");
+
+  if (!sourceEl || !listEl) return;
+
+  sourceEl.textContent = `Fuente: ${currencySources[currency]}`;
+
+  if (isNaN(amount) || amount <= 0) {
+    listEl.innerHTML = '<p class="empty-message">Ingresa un monto para ver conversiones</p>';
+    return;
+  }
+
+  const amountVES = convertToVES(amount, currency);
+  const currencies = ["VES", "USD", "EUR", "USDT"];
+
+  const tasaBase = currencies
+    .filter(code => code !== currency)
+    .map(code => {
+      const converted = convertFromVES(amountVES, code);
+      return `
+        <div class="conversion-item">
+          <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong>
+        </div>
+      `;
+    })
+    .join("");
+
+  const oneUnitVES = convertToVES(1, currency);
+  const oneUnitLines = currencies
+    .map(code => {
+      const converted = convertFromVES(oneUnitVES, code);
+      return `<div class="conversion-item">1 ${currency} = ${formatMoney(converted, code)}</div>`;
+    })
+    .join("");
+
+  listEl.innerHTML = `
+    <div class="conversion-item">
+      <strong>Monto en VES interno:</strong> ${formatMoney(amountVES, "VES")}
+    </div>
+    ${tasaBase}
+    <div class="conversion-item">
+      <strong>Referencia por unidad:</strong>
+    </div>
+    ${oneUnitLines}
+  `;
 }
 
 function getCategoryName(key) {
@@ -154,12 +215,7 @@ function agregarCategoriaPersonalizada(e) {
     return;
   }
 
-  categories[key] = {
-    name,
-    emoji,
-    custom: true
-  };
-
+  categories[key] = { name, emoji, custom: true };
   guardarCategorias();
   document.getElementById("categoryForm").reset();
   renderTodo();
@@ -207,12 +263,7 @@ function renderCategoriasPersonalizadas() {
 }
 
 function normalizarClaveCategoria(texto) {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
 function guardarTransaccion(e) {
@@ -249,10 +300,7 @@ function guardarTransaccion(e) {
     transactions = transactions.map(t => t.id === Number(id) ? { ...t, ...payload } : t);
     alert("✅ Transacción editada.");
   } else {
-    transactions.push({
-      id: Date.now(),
-      ...payload
-    });
+    transactions.push({ id: Date.now(), ...payload });
     alert("✅ Transacción agregada.");
   }
 
@@ -280,6 +328,7 @@ function editarTransaccion(id) {
   document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
   document.getElementById("cancelEditBtn").classList.remove("hidden");
 
+  actualizarVistaConversion();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -295,6 +344,7 @@ function limpiarFormularioTransaccion() {
   document.getElementById("cancelEditBtn").classList.add("hidden");
   document.getElementById("transactionCurrency").value = "VES";
   configurarFecha();
+  actualizarVistaConversion();
 }
 
 function eliminarTransaccion(id) {
@@ -356,8 +406,7 @@ function filtrarTransacciones() {
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (filtradas.length === 0) {
-    document.getElementById("transactionsList").innerHTML =
-      '<p class="empty-message">No hay transacciones que coincidan con los filtros</p>';
+    document.getElementById("transactionsList").innerHTML = '<p class="empty-message">No hay transacciones que coincidan con los filtros</p>';
     return;
   }
 
@@ -376,15 +425,22 @@ function agregarPresupuesto(e) {
 
   const category = document.getElementById("budgetCategory").value;
   const amount = parseFloat(document.getElementById("budgetAmount").value);
+  const currency = document.getElementById("budgetCurrency").value;
 
-  if (!category || isNaN(amount) || amount <= 0) {
+  if (!category || !currency || isNaN(amount) || amount <= 0) {
     alert("Ingresa un presupuesto válido.");
     return;
   }
 
-  budgets[category] = amount;
+  budgets[category] = {
+    amountOriginal: amount,
+    currency,
+    amountVES: convertToVES(amount, currency)
+  };
+
   guardarDatos();
   document.getElementById("budgetForm").reset();
+  document.getElementById("budgetCurrency").value = "VES";
   renderTodo();
   alert("✅ Presupuesto guardado.");
 }
@@ -397,15 +453,19 @@ function eliminarPresupuesto(category) {
 }
 
 function obtenerEstadoPresupuesto(category) {
-  const budgetAmount = budgets[category];
+  const budgetData = budgets[category];
+  const budgetAmountVES = typeof budgetData === "number" ? budgetData : (budgetData?.amountVES || 0);
+
   const spent = transactions
     .filter(t => t.category === category && t.type === "gasto")
     .reduce((sum, t) => sum + t.amountVES, 0);
 
-  const percent = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
+  const percent = budgetAmountVES > 0 ? (spent / budgetAmountVES) * 100 : 0;
 
   return {
-    budgetAmount,
+    budgetAmountVES,
+    budgetOriginalAmount: budgetData?.amountOriginal ?? budgetAmountVES,
+    budgetOriginalCurrency: budgetData?.currency ?? "VES",
     spent,
     percent,
     warning: percent >= 80 && percent < 100,
@@ -425,16 +485,19 @@ function mostrarPresupuestos() {
   lista.innerHTML = keys.map(category => {
     const estado = obtenerEstadoPresupuesto(category);
     const spentVisible = convertFromVES(estado.spent, displayCurrency);
-    const budgetVisible = convertFromVES(estado.budgetAmount, displayCurrency);
+    const budgetVisible = convertFromVES(estado.budgetAmountVES, displayCurrency);
 
     return `
       <div class="budget-item ${estado.warning ? "alerta" : ""} ${estado.exceeded ? "excedido" : ""}">
         <div>
           <div><strong>${getCategoryEmoji(category)} ${escapeHtml(getCategoryName(category))}</strong></div>
+          <div class="transaction-original">
+            Presupuesto original: ${formatMoney(estado.budgetOriginalAmount, estado.budgetOriginalCurrency)} · ${currencyLabels[estado.budgetOriginalCurrency]}
+          </div>
           <div class="budget-progress">
             <div class="budget-progress-bar ${estado.exceeded ? "exceeded" : estado.warning ? "warning" : ""}" style="width:${Math.min(estado.percent, 100)}%"></div>
           </div>
-          <small>Gastado: ${formatMoney(spentVisible, displayCurrency)} / Presupuesto: ${formatMoney(budgetVisible, displayCurrency)}</small>
+          <small>Gastado: ${formatMoney(spentVisible, displayCurrency)} / Presupuesto visible: ${formatMoney(budgetVisible, displayCurrency)}</small>
         </div>
         <div>
           <div>${estado.percent.toFixed(0)}%</div>
@@ -456,15 +519,8 @@ function mostrarAlertasPresupuesto() {
 
   const alertas = keys.map(category => {
     const estado = obtenerEstadoPresupuesto(category);
-
-    if (estado.exceeded) {
-      return `<div class="alert-box danger">🚨 Has superado el presupuesto de ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
-    }
-
-    if (estado.warning) {
-      return `<div class="alert-box warning">⚠️ Estás cerca del límite en ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
-    }
-
+    if (estado.exceeded) return `<div class="alert-box danger">🚨 Has superado el presupuesto de ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
+    if (estado.warning) return `<div class="alert-box warning">⚠️ Estás cerca del límite en ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
     return "";
   }).filter(Boolean);
 
@@ -472,16 +528,15 @@ function mostrarAlertasPresupuesto() {
 }
 
 function actualizarResumen() {
-  const totalIncomeVES = transactions
-    .filter(t => t.type === "ingreso")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
-  const totalExpenseVES = transactions
-    .filter(t => t.type === "gasto")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
+  const totalIncomeVES = transactions.filter(t => t.type === "ingreso").reduce((sum, t) => sum + t.amountVES, 0);
+  const totalExpenseVES = transactions.filter(t => t.type === "gasto").reduce((sum, t) => sum + t.amountVES, 0);
   const balanceVES = totalIncomeVES - totalExpenseVES;
-  const totalBudgetVES = Object.values(budgets).reduce((sum, n) => sum + n, 0);
+
+  const totalBudgetVES = Object.values(budgets).reduce((sum, item) => {
+    if (typeof item === "number") return sum + item;
+    return sum + (item?.amountVES || 0);
+  }, 0);
+
   const budgetUsed = totalBudgetVES > 0 ? (totalExpenseVES / totalBudgetVES) * 100 : 0;
 
   document.getElementById("totalIncome").textContent = formatMoney(convertFromVES(totalIncomeVES, displayCurrency), displayCurrency);
@@ -491,14 +546,8 @@ function actualizarResumen() {
 }
 
 function actualizarResumenAhorro() {
-  const totalIncomeVES = transactions
-    .filter(t => t.type === "ingreso")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
-  const totalExpenseVES = transactions
-    .filter(t => t.type === "gasto")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
+  const totalIncomeVES = transactions.filter(t => t.type === "ingreso").reduce((sum, t) => sum + t.amountVES, 0);
+  const totalExpenseVES = transactions.filter(t => t.type === "gasto").reduce((sum, t) => sum + t.amountVES, 0);
   const ahorroActualVES = totalIncomeVES - totalExpenseVES;
   const faltanteVES = Math.max(savingGoal - ahorroActualVES, 0);
   const progress = savingGoal > 0 ? Math.min((ahorroActualVES / savingGoal) * 100, 100) : 0;
@@ -512,15 +561,23 @@ function actualizarResumenAhorro() {
 
 function guardarMetaAhorro(e) {
   e.preventDefault();
-  const value = parseFloat(document.getElementById("savingGoalInput").value);
 
-  if (isNaN(value) || value < 0) {
+  const value = parseFloat(document.getElementById("savingGoalInput").value);
+  const currency = document.getElementById("savingGoalCurrency").value;
+
+  if (isNaN(value) || value < 0 || !currency) {
     alert("Ingresa una meta válida.");
     return;
   }
 
-  savingGoal = value;
-  localStorage.setItem("savingGoal", JSON.stringify(savingGoal));
+  savingGoal = convertToVES(value, currency);
+
+  localStorage.setItem("savingGoal", JSON.stringify({
+    amountVES: savingGoal,
+    amountOriginal: value,
+    currency
+  }));
+
   renderTodo();
   alert("✅ Meta de ahorro guardada.");
 }
@@ -528,10 +585,20 @@ function guardarMetaAhorro(e) {
 function cargarMetaAhorro() {
   const saved = localStorage.getItem("savingGoal");
   if (!saved) return;
+
   try {
-    savingGoal = JSON.parse(saved) || 0;
-    const input = document.getElementById("savingGoalInput");
-    if (input) input.value = savingGoal;
+    const parsed = JSON.parse(saved);
+
+    if (typeof parsed === "number") {
+      savingGoal = parsed;
+    } else {
+      savingGoal = parsed.amountVES || 0;
+      const input = document.getElementById("savingGoalInput");
+      const currencySelect = document.getElementById("savingGoalCurrency");
+
+      if (input) input.value = parsed.amountOriginal ?? parsed.amountVES ?? 0;
+      if (currencySelect) currencySelect.value = parsed.currency || "VES";
+    }
   } catch {
     savingGoal = 0;
   }
@@ -544,12 +611,9 @@ function actualizarGraficos() {
 
 function actualizarGraficoGastos() {
   const gastosPorCategoria = {};
-
-  transactions
-    .filter(t => t.type === "gasto")
-    .forEach(t => {
-      gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
-    });
+  transactions.filter(t => t.type === "gasto").forEach(t => {
+    gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
+  });
 
   const labels = Object.keys(gastosPorCategoria).map(cat => `${getCategoryEmoji(cat)} ${getCategoryName(cat)}`);
   const data = Object.values(gastosPorCategoria).map(valor => convertFromVES(valor, displayCurrency));
@@ -567,21 +631,13 @@ function actualizarGraficoGastos() {
         backgroundColor: ["#6366f1", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#84cc16", "#f97316", "#14b8a6", "#e879f9"]
       }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
-    }
+    options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
 function actualizarGraficoBalance() {
-  const ingresosVES = transactions
-    .filter(t => t.type === "ingreso")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
-  const gastosVES = transactions
-    .filter(t => t.type === "gasto")
-    .reduce((sum, t) => sum + t.amountVES, 0);
+  const ingresosVES = transactions.filter(t => t.type === "ingreso").reduce((sum, t) => sum + t.amountVES, 0);
+  const gastosVES = transactions.filter(t => t.type === "gasto").reduce((sum, t) => sum + t.amountVES, 0);
 
   const ctx = document.getElementById("balanceChart");
   if (!ctx) return;
@@ -593,17 +649,11 @@ function actualizarGraficoBalance() {
       labels: ["Ingresos", "Gastos"],
       datasets: [{
         label: `Monto en ${displayCurrency}`,
-        data: [
-          convertFromVES(ingresosVES, displayCurrency),
-          convertFromVES(gastosVES, displayCurrency)
-        ],
+        data: [convertFromVES(ingresosVES, displayCurrency), convertFromVES(gastosVES, displayCurrency)],
         backgroundColor: ["#10b981", "#ef4444"]
       }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
-    }
+    options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
@@ -612,8 +662,7 @@ function llenarMesesReporte() {
   if (!select) return;
 
   const mesesUnicos = [...new Set(transactions.map(t => t.date.slice(0, 7)))].sort().reverse();
-  select.innerHTML = '<option value="">Selecciona un mes</option>' +
-    mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
+  select.innerHTML = '<option value="">Selecciona un mes</option>' + mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
 }
 
 function generarReporte() {
@@ -673,7 +722,6 @@ function generarReporte() {
 function cambiarTab(tab) {
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-
   document.getElementById(`tab-${tab}`).classList.add("active");
 
   const botones = document.querySelectorAll(".tab-btn");
@@ -721,6 +769,7 @@ function guardarTasas() {
   exchangeRates.USDT = usdt;
 
   localStorage.setItem("exchangeRates", JSON.stringify(exchangeRates));
+  pintarFormularioTasas();
   renderTodo();
   generarReporteSiExiste();
   alert("✅ Tasas guardadas correctamente.");
@@ -729,7 +778,6 @@ function guardarTasas() {
 function cargarTasas() {
   const saved = localStorage.getItem("exchangeRates");
   if (!saved) return;
-
   try {
     const parsed = JSON.parse(saved);
     exchangeRates = { ...exchangeRates, ...parsed, VES: 1 };
@@ -739,9 +787,13 @@ function cargarTasas() {
 }
 
 function pintarFormularioTasas() {
-  document.getElementById("rateUSD").value = exchangeRates.USD;
-  document.getElementById("rateEUR").value = exchangeRates.EUR;
-  document.getElementById("rateUSDT").value = exchangeRates.USDT;
+  const usd = document.getElementById("rateUSD");
+  const eur = document.getElementById("rateEUR");
+  const usdt = document.getElementById("rateUSDT");
+
+  if (usd) usd.value = exchangeRates.USD;
+  if (eur) eur.value = exchangeRates.EUR;
+  if (usdt) usdt.value = exchangeRates.USDT;
 }
 
 function guardarCategorias() {
@@ -751,7 +803,6 @@ function guardarCategorias() {
 function cargarCategorias() {
   const saved = localStorage.getItem("categories");
   if (!saved) return;
-
   try {
     const parsed = JSON.parse(saved);
     categories = { ...categories, ...parsed };
@@ -780,6 +831,7 @@ function cargarDatos() {
       amountVES: t.amountVES ?? t.amount ?? 0,
       notes: t.notes || ""
     }));
+
     budgets = parsed.budgets || {};
   } catch {
     transactions = [];
@@ -813,11 +865,7 @@ function exportarCSV() {
     return;
   }
 
-  const encabezados = [
-    "id","descripcion","monto_original","moneda_original","monto_en_ves",
-    "categoria","tipo","fecha","notas"
-  ];
-
+  const encabezados = ["id","descripcion","monto_original","moneda_original","monto_en_ves","categoria","tipo","fecha","notas"];
   const filas = transactions.map(t => [
     t.id,
     escaparCSV(t.description),
@@ -857,7 +905,15 @@ function limpiarDatos() {
   limpiarFormularioTransaccion();
   llenarMesesReporte();
   renderTodo();
-  document.getElementById("savingGoalInput").value = "";
+
+  const savingInput = document.getElementById("savingGoalInput");
+  const savingCurrency = document.getElementById("savingGoalCurrency");
+  const budgetCurrency = document.getElementById("budgetCurrency");
+
+  if (savingInput) savingInput.value = "";
+  if (savingCurrency) savingCurrency.value = "VES";
+  if (budgetCurrency) budgetCurrency.value = "VES";
+
   document.getElementById("reportContent").innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
 }
 
