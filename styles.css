@@ -171,6 +171,7 @@ body {
 
 .form-group input,
 .form-group select,
+.form-group textarea,
 .filter-input {
   width: 100%;
   padding: 10px 12px;
@@ -178,6 +179,12 @@ body {
   border-radius: var(--radius);
   background: var(--card-background);
   color: var(--text-primary);
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 90px;
 }
 
 .filters,
@@ -265,7 +272,7 @@ body.dark-mode .report-item {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
   border-left: 4px solid transparent;
 }
 
@@ -286,9 +293,15 @@ body.dark-mode .report-item {
 }
 
 .transaction-description,
-.transaction-date {
+.transaction-date,
+.transaction-notes {
   color: var(--text-secondary);
   font-size: 0.92rem;
+}
+
+.transaction-notes {
+  margin-top: 6px;
+  white-space: pre-wrap;
 }
 
 .transaction-amount {
@@ -417,7 +430,6 @@ body.dark-mode .alert-box.danger {
 
   .transaction-item {
     flex-direction: column;
-    align-items: flex-start;
   }
 
   .transaction-actions {
