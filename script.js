@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cargarCategorias();
   cargarMetaAhorro();
   inicializarTema();
+  actualizarEncabezado();
   configurarFecha();
   inicializarEventos();
   llenarSelectsCategorias();
@@ -68,6 +69,29 @@ function inicializarEventos() {
   document.getElementById("filterType").addEventListener("change", filtrarTransacciones);
   document.getElementById("amount").addEventListener("input", actualizarVistaConversion);
   document.getElementById("transactionCurrency").addEventListener("change", actualizarVistaConversion);
+}
+
+function actualizarEncabezado() {
+  const ahoraCaracas = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Caracas" })
+  );
+
+  const hora = ahoraCaracas.getHours();
+  let saludo = "Hola";
+
+  if (hora >= 5 && hora < 12) {
+    saludo = "Buenos días";
+  } else if (hora >= 12 && hora < 19) {
+    saludo = "Buenas tardes";
+  } else {
+    saludo = "Buenas noches";
+  }
+
+  const titulo = document.getElementById("mainGreeting");
+  const subtitulo = document.getElementById("mainSubtitle");
+
+  if (titulo) titulo.textContent = `${saludo}, Paula`;
+  if (subtitulo) subtitulo.textContent = "Bienvenida a tu Gestor de Finanzas Personal";
 }
 
 function renderTodo() {
@@ -297,7 +321,15 @@ function guardarTransaccion(e) {
   };
 
   if (id) {
-    transactions = transactions.map(t => t.id === Number(id) ? { ...t, ...payload } : t);
+    const idNumber = Number(id);
+    const index = transactions.findIndex(t => t.id === idNumber);
+
+    if (index === -1) {
+      alert("No se encontró la transacción a editar.");
+      return;
+    }
+
+    transactions[index] = { ...transactions[index], ...payload };
     alert("✅ Transacción editada.");
   } else {
     transactions.push({ id: Date.now(), ...payload });
@@ -313,9 +345,12 @@ function guardarTransaccion(e) {
 
 function editarTransaccion(id) {
   const t = transactions.find(item => item.id === id);
-  if (!t) return;
+  if (!t) {
+    alert("No se pudo cargar la transacción.");
+    return;
+  }
 
-  document.getElementById("transactionId").value = t.id;
+  document.getElementById("transactionId").value = String(t.id);
   document.getElementById("description").value = t.description;
   document.getElementById("amount").value = t.amountOriginal ?? t.amountVES;
   document.getElementById("transactionCurrency").value = t.currency || "VES";
@@ -324,7 +359,7 @@ function editarTransaccion(id) {
   document.getElementById("date").value = t.date;
   document.getElementById("notes").value = t.notes || "";
 
-  document.getElementById("transactionFormTitle").textContent = "✏️ Editar Transacción";
+  document.getElementById("transactionFormTitle").textContent = "✏️ Editando Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
   document.getElementById("cancelEditBtn").classList.remove("hidden");
 
@@ -826,6 +861,7 @@ function cargarDatos() {
     const parsed = JSON.parse(datos);
     transactions = (parsed.transactions || []).map(t => ({
       ...t,
+      id: Number(t.id),
       amountOriginal: t.amountOriginal ?? t.amount ?? t.amountVES ?? 0,
       currency: t.currency || "VES",
       amountVES: t.amountVES ?? t.amount ?? 0,
