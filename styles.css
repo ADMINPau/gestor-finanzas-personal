@@ -22,6 +22,10 @@
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   --shadow-strong: 0 20px 45px rgba(0, 0, 0, 0.35);
   --transition: all 0.28s ease;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 14px;
+  --container-width: 1450px;
 }
 
 body.light-mode {
@@ -45,6 +49,11 @@ body.light-mode {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  min-width: 0;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -57,10 +66,23 @@ body {
   transition: var(--transition);
 }
 
+img,
+canvas {
+  max-width: 100%;
+  display: block;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 .container {
-  max-width: 1450px;
+  width: min(100%, var(--container-width));
   margin: 0 auto;
-  padding: 24px;
+  padding: clamp(12px, 2vw, 24px);
 }
 
 .header,
@@ -85,23 +107,26 @@ body {
 
 .header {
   color: white;
-  padding: 34px;
-  border-radius: 24px;
+  padding: clamp(18px, 3vw, 34px);
+  border-radius: var(--radius-lg);
   margin-bottom: 28px;
   display: flex;
   justify-content: space-between;
   gap: 20px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .header h1 {
   font-family: 'Orbitron', sans-serif;
-  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-size: clamp(1.5rem, 4vw, 3rem);
   letter-spacing: 1px;
+  line-height: 1.15;
 }
 
 .subtitle {
   color: rgba(255,255,255,0.92);
+  font-size: clamp(0.92rem, 1.5vw, 1rem);
 }
 
 .header-buttons {
@@ -112,19 +137,30 @@ body {
 
 .summary-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 18px;
   margin-bottom: 22px;
 }
 
 .summary-card {
-  padding: 22px;
+  padding: clamp(14px, 2vw, 22px);
   border-radius: 20px;
+  overflow: hidden;
+}
+
+.summary-card h3 {
+  font-size: clamp(0.8rem, 1.4vw, 0.95rem);
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  line-height: 1.3;
 }
 
 .summary-card .amount {
-  font-size: 2rem;
+  font-size: clamp(1rem, 2.6vw, 2rem);
   font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .income { border-left: 4px solid #22c55e; }
@@ -144,11 +180,12 @@ body {
   background: rgba(255,255,255,0.06);
   color: var(--text-primary);
   padding: 12px 18px 12px 42px;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
   transition: var(--transition);
   position: relative;
+  flex: 0 1 auto;
 }
 
 .tab-btn::before {
@@ -174,13 +211,19 @@ body {
   border-color: transparent;
 }
 
-.tab-content { display: none; }
-.tab-content.active { display: block; }
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
 
 .main-content {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   gap: 22px;
+  align-items: start;
 }
 
 .sidebar,
@@ -195,7 +238,7 @@ body {
 .chart-section,
 .report-section,
 .rate-card {
-  padding: 22px;
+  padding: clamp(16px, 2vw, 22px);
   border-radius: 22px;
 }
 
@@ -208,13 +251,15 @@ body {
   margin-bottom: 16px;
   font-weight: 800;
   position: relative;
+  line-height: 1.25;
+  flex-wrap: wrap;
 }
 
 .section-title::after,
 .mini-title::after,
 .cashea-installments h4::after {
   content: "";
-  flex: 1;
+  flex: 1 1 120px;
   height: 1px;
   background: linear-gradient(90deg, rgba(6, 182, 212, 0.45), transparent);
 }
@@ -264,7 +309,7 @@ body {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   background: rgba(255,255,255,0.08);
   color: var(--text-primary);
 }
@@ -289,16 +334,17 @@ body.light-mode .filter-input {
 }
 
 .filter-input {
-  flex: 1;
-  min-width: 180px;
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 .btn {
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   padding: 11px 16px;
   cursor: pointer;
   font-weight: 700;
+  white-space: normal;
 }
 
 .btn-primary {
@@ -364,7 +410,7 @@ body.light-mode .btn-secondary {
 .custom-category-item,
 .conversion-item,
 .cashea-installment {
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   padding: 15px;
 }
 
@@ -382,7 +428,8 @@ body.light-mode .btn-secondary {
 .transaction-item.ingreso { border-left: 4px solid var(--success-color); }
 
 .transaction-info {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .transaction-category,
@@ -398,11 +445,21 @@ body.light-mode .btn-secondary {
 .config-help {
   color: var(--text-secondary);
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.transaction-description {
+  color: var(--text-primary);
+  font-size: 1rem;
 }
 
 .transaction-amount {
   font-weight: 800;
-  font-size: 1.08rem;
+  font-size: clamp(0.95rem, 2vw, 1.08rem);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: right;
 }
 
 .transaction-amount.gasto { color: var(--danger-color); }
@@ -412,6 +469,7 @@ body.light-mode .btn-secondary {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .budget-item.alerta { border-left: 4px solid var(--warning-color); }
@@ -444,6 +502,7 @@ body.light-mode .btn-secondary {
   border-radius: 14px;
   margin-bottom: 10px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .alert-box.warning {
@@ -458,12 +517,13 @@ body.light-mode .btn-secondary {
 
 .charts-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
 .chart-wrapper {
-  height: 320px;
+  width: 100%;
+  height: clamp(240px, 40vw, 320px);
 }
 
 .empty-message {
@@ -475,7 +535,7 @@ body.light-mode .btn-secondary {
 .report-item-details,
 .cashea-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 12px;
   margin-top: 10px;
 }
@@ -505,6 +565,11 @@ body.light-mode .conversion-item {
   margin-bottom: 4px;
 }
 
+.cashea-mini-card strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .cashea-installment {
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border-color);
@@ -528,18 +593,22 @@ body.light-mode .conversion-item {
 
 .conversion-item {
   background: rgba(255,255,255,0.05);
+  overflow-wrap: anywhere;
 }
 
-@media (max-width: 950px) {
-  .main-content,
+@media (max-width: 1100px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
   .charts-container {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 600px) {
-  .container {
-    padding: 16px;
+@media (max-width: 768px) {
+  .summary-section {
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   }
 
   .header,
@@ -550,7 +619,38 @@ body.light-mode .conversion-item {
     align-items: flex-start;
   }
 
+  .transaction-amount {
+    text-align: left;
+  }
+
+  .transaction-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .tab-btn {
+    flex: 1 1 220px;
+  }
+}
+
+@media (max-width: 520px) {
+  .container {
+    padding: 12px;
+  }
+
+  .summary-section {
+    grid-template-columns: 1fr;
+  }
+
   .tab-btn {
     width: 100%;
+  }
+
+  .header-buttons {
+    width: 100%;
+  }
+
+  .header-buttons .btn {
+    flex: 1 1 100%;
   }
 }
