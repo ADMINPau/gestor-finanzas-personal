@@ -9,6 +9,8 @@
   --warning-color: #f59e0b;
   --warning-soft: rgba(245, 158, 11, 0.16);
   --danger-soft: rgba(239, 68, 68, 0.16);
+  --edit-color: #38bdf8;
+  --edit-soft: rgba(56, 189, 248, 0.16);
 
   --background-color: #0b1020;
   --background-overlay:
@@ -41,6 +43,7 @@ body.light-mode {
   --shadow-strong: 0 18px 38px rgba(15, 23, 42, 0.16);
   --warning-soft: rgba(245, 158, 11, 0.18);
   --danger-soft: rgba(239, 68, 68, 0.16);
+  --edit-soft: rgba(56, 189, 248, 0.12);
 }
 
 * {
@@ -260,16 +263,41 @@ body {
 .rate-card {
   padding: 22px;
   border-radius: 22px;
+  transition: var(--transition);
 }
 
 .form-section h2,
 .list-section h2,
 .chart-section h2,
 .report-section h2,
-.rate-card h3 {
+.rate-card h3,
+.cashea-installments h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 16px;
   font-weight: 800;
   letter-spacing: 0.3px;
+  position: relative;
+}
+
+.form-section h2::after,
+.list-section h2::after,
+.chart-section h2::after,
+.report-section h2::after,
+.rate-card h3::after,
+.cashea-installments h4::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.45), transparent);
+  margin-left: 8px;
+}
+
+.form-section.editing {
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25), 0 18px 38px rgba(8, 145, 178, 0.18);
+  background: linear-gradient(135deg, var(--edit-soft), var(--card-background));
 }
 
 .form-group {
@@ -637,10 +665,6 @@ body.light-mode .cashea-mini-card {
 
 .cashea-mini-card strong {
   font-size: 1rem;
-}
-
-.cashea-installments h4 {
-  margin-bottom: 10px;
 }
 
 .cashea-installments {
