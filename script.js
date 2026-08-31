@@ -61,6 +61,13 @@ function configurarFecha() {
 
   const casheaDate = document.getElementById("casheaDate");
   if (casheaDate && !casheaDate.value) casheaDate.valueAsDate = new Date();
+
+  const firstPaymentDate = document.getElementById("casheaFirstPaymentDate");
+  if (firstPaymentDate && !firstPaymentDate.value) {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    firstPaymentDate.value = nextMonth.toISOString().slice(0, 10);
+  }
 }
 
 function inicializarEventos() {
@@ -98,9 +105,8 @@ function actualizarEncabezado() {
 function actualizarBotonTema() {
   const button = document.querySelector(".header-buttons .btn.btn-secondary");
   if (!button) return;
-
   const isLight = document.body.classList.contains("light-mode");
-  button.textContent = isLight ? "🌙 Tema oscuro" : "☀️ Tema claro";
+  button.textContent = isLight ? "Tema oscuro" : "Tema claro";
 }
 
 function renderTodo() {
@@ -112,6 +118,7 @@ function renderTodo() {
   actualizarResumen();
   actualizarResumenAhorro();
   actualizarResumenCashea();
+  mostrarAlertasCashea();
   mostrarComprasCashea();
   actualizarGraficos();
   actualizarVistaConversion();
@@ -120,7 +127,6 @@ function renderTodo() {
 
 function formatMoney(value, currency = displayCurrency) {
   const localeMap = { VES: "es-VE", USD: "en-US", EUR: "es-ES", USDT: "en-US" };
-
   if (currency === "USDT") return `${Number(value).toFixed(2)} USDT`;
 
   try {
@@ -165,20 +171,13 @@ function actualizarVistaConversion() {
     .filter(code => code !== currency)
     .map(code => {
       const converted = convertFromVES(amountVES, code);
-      return `
-        <div class="conversion-item">
-          <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong>
-        </div>
-      `;
+      return `<div class="conversion-item"><strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong></div>`;
     })
     .join("");
 
   const oneUnitVES = convertToVES(1, currency);
   const oneUnitLines = currencies
-    .map(code => {
-      const converted = convertFromVES(oneUnitVES, code);
-      return `<div class="conversion-item">1 ${currency} = ${formatMoney(converted, code)}</div>`;
-    })
+    .map(code => `<div class="conversion-item">1 ${currency} = ${formatMoney(convertFromVES(oneUnitVES, code), code)}</div>`)
     .join("");
 
   listEl.innerHTML = `
@@ -202,18 +201,14 @@ function llenarSelectsCategorias() {
     .map(([key, value]) => `<option value="${key}">${value.emoji} ${value.name}</option>`)
     .join("");
 
-  const ids = ["category", "budgetCategory", "filterCategory", "casheaCategory"];
-
-  ids.forEach(id => {
+  ["category", "budgetCategory", "filterCategory", "casheaCategory"].forEach(id => {
     const select = document.getElementById(id);
     if (!select) return;
 
     const current = select.value;
-    if (id === "filterCategory") {
-      select.innerHTML = `<option value="">Todas las categorías</option>${categoryOptions}`;
-    } else {
-      select.innerHTML = `<option value="">Selecciona una categoría</option>${categoryOptions}`;
-    }
+    select.innerHTML = id === "filterCategory"
+      ? `<option value="">Todas las categorías</option>${categoryOptions}`
+      : `<option value="">Selecciona una categoría</option>${categoryOptions}`;
 
     if (current && categories[current]) select.value = current;
   });
@@ -285,12 +280,63 @@ function renderCategoriasPersonalizadas() {
 }
 
 function normalizarClaveCategoria(texto) {
-  return texto
-    .toLowerCase()
+  return texto.toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function sumarMeses(fechaTexto, cantidadMeses) {
+  const [year, month, day] = fechaTexto.split("-").map(Number);
+  const fecha = new Date(year, month - 1 + cantidadMeses, day);
+  const yyyy = fecha.getFullYear();
+  const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dd = String(fecha.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function fechaEstaVencida(fechaTexto) {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const fecha = new Date(`${fechaTexto}T00:00:00`);
+  return fecha < hoy;
+}
+
+function crearTransaccionDesdeCashea({ description, category, date, amountOriginal, currency, casheaPurchaseId, cuotaNumero = null, esInicial = false }) {
+  const existe = transactions.some(t =>
+    t.origin === "cashea" &&
+    t.casheaPurchaseId === casheaPurchaseId &&
+    t.cuotaNumero === cuotaNumero &&
+    Boolean(t.esInicial) === Boolean(esInicial)
+  );
+
+  if (existe) return;
+
+  transactions.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    description,
+    amountOriginal,
+    currency,
+    amountVES: convertToVES(amountOriginal, currency),
+    category,
+    type: "gasto",
+    date,
+    notes: esInicial ? "Pago inicial de Cashea" : `Pago de cuota ${cuotaNumero} de Cashea`,
+    origin: "cashea",
+    casheaPurchaseId,
+    cuotaNumero,
+    esInicial
+  });
+}
+
+function eliminarTransaccionCashea(casheaPurchaseId, cuotaNumero = null, esInicial = false) {
+  transactions = transactions.filter(t => !(
+    t.origin === "cashea" &&
+    t.casheaPurchaseId === casheaPurchaseId &&
+    t.cuotaNumero === cuotaNumero &&
+    Boolean(t.esInicial) === Boolean(esInicial)
+  ));
 }
 
 function guardarTransaccion(e) {
@@ -310,13 +356,11 @@ function guardarTransaccion(e) {
     return;
   }
 
-  const amountVES = convertToVES(amount, transactionCurrency);
-
   const payload = {
     description,
     amountOriginal: amount,
     currency: transactionCurrency,
-    amountVES,
+    amountVES: convertToVES(amount, transactionCurrency),
     category,
     type,
     date,
@@ -329,6 +373,11 @@ function guardarTransaccion(e) {
 
     if (index === -1) {
       alert("No se encontró la transacción a editar.");
+      return;
+    }
+
+    if (transactions[index].origin === "cashea") {
+      alert("Las transacciones automáticas de Cashea no se editan desde aquí.");
       return;
     }
 
@@ -353,6 +402,11 @@ function editarTransaccion(id) {
     return;
   }
 
+  if (t.origin === "cashea") {
+    alert("Esta transacción fue generada automáticamente por Cashea. Debes gestionarla desde la pestaña Cashea.");
+    return;
+  }
+
   document.getElementById("transactionId").value = String(t.id);
   document.getElementById("description").value = t.description;
   document.getElementById("amount").value = t.amountOriginal ?? t.amountVES;
@@ -362,12 +416,11 @@ function editarTransaccion(id) {
   document.getElementById("date").value = t.date;
   document.getElementById("notes").value = t.notes || "";
 
-  document.getElementById("transactionFormTitle").textContent = "✏️ Editando Transacción";
+  document.getElementById("transactionFormTitle").textContent = "Editando Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
   document.getElementById("cancelEditBtn").classList.remove("hidden");
 
-  const form = document.getElementById("transactionForm");
-  const formSection = form ? form.closest(".form-section") : null;
+  const formSection = document.getElementById("transactionForm")?.closest(".form-section");
   if (formSection) formSection.classList.add("editing");
 
   actualizarVistaConversion();
@@ -381,13 +434,12 @@ function cancelarEdicion() {
 function limpiarFormularioTransaccion() {
   document.getElementById("transactionForm")?.reset();
   document.getElementById("transactionId").value = "";
-  document.getElementById("transactionFormTitle").textContent = "➕ Nueva Transacción";
+  document.getElementById("transactionFormTitle").textContent = "Nueva Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Agregar Transacción";
   document.getElementById("cancelEditBtn").classList.add("hidden");
   document.getElementById("transactionCurrency").value = "VES";
 
-  const form = document.getElementById("transactionForm");
-  const formSection = form ? form.closest(".form-section") : null;
+  const formSection = document.getElementById("transactionForm")?.closest(".form-section");
   if (formSection) formSection.classList.remove("editing");
 
   configurarFecha();
@@ -395,7 +447,16 @@ function limpiarFormularioTransaccion() {
 }
 
 function eliminarTransaccion(id) {
+  const transaccion = transactions.find(t => t.id === id);
+  if (!transaccion) return;
+
+  if (transaccion.origin === "cashea") {
+    alert("Esta transacción fue generada automáticamente por Cashea. Debes cambiarla desde la compra Cashea asociada.");
+    return;
+  }
+
   if (!confirm("¿Deseas eliminar esta transacción?")) return;
+
   transactions = transactions.filter(t => t.id !== id);
   guardarDatos();
   llenarMesesReporte();
@@ -416,6 +477,10 @@ function mostrarTransacciones(listaPersonalizada = null) {
 
   lista.innerHTML = base.map(t => {
     const visibleAmount = convertFromVES(t.amountVES, displayCurrency);
+    const origenCashea = t.origin === "cashea"
+      ? `<div class="transaction-notes">Generada automáticamente desde Cashea</div>`
+      : "";
+
     return `
       <div class="transaction-item ${t.type}">
         <div class="transaction-info">
@@ -425,7 +490,8 @@ function mostrarTransacciones(listaPersonalizada = null) {
           <div class="transaction-original">
             Original: ${formatMoney(t.amountOriginal ?? t.amountVES, t.currency || "VES")} · ${currencyLabels[t.currency || "VES"]}
           </div>
-          ${t.notes ? `<div class="transaction-notes">📝 ${escapeHtml(t.notes)}</div>` : ""}
+          ${t.notes ? `<div class="transaction-notes">${escapeHtml(t.notes)}</div>` : ""}
+          ${origenCashea}
         </div>
         <div class="transaction-amount ${t.type}">
           ${t.type === "gasto" ? "-" : "+"}${formatMoney(visibleAmount, displayCurrency)}
@@ -447,10 +513,9 @@ function filtrarTransacciones() {
   const filtradas = transactions
     .filter(t => {
       const textoBase = `${t.description} ${t.notes || ""} ${getCategoryName(t.category)} ${t.currency || ""}`.toLowerCase();
-      const coincideTexto = textoBase.includes(texto);
-      const coincideCategoria = !categoria || t.category === categoria;
-      const coincideTipo = !tipo || t.type === tipo;
-      return coincideTexto && coincideCategoria && coincideTipo;
+      return textoBase.includes(texto) &&
+        (!categoria || t.category === categoria) &&
+        (!tipo || t.type === tipo);
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -492,7 +557,7 @@ function agregarPresupuesto(e) {
 
   guardarDatos();
   document.getElementById("budgetForm")?.reset();
-  if (document.getElementById("budgetCurrency")) document.getElementById("budgetCurrency").value = "VES";
+  document.getElementById("budgetCurrency").value = "VES";
   renderTodo();
   alert("✅ Presupuesto guardado.");
 }
@@ -530,7 +595,6 @@ function mostrarPresupuestos() {
   if (!lista) return;
 
   const keys = Object.keys(budgets);
-
   if (keys.length === 0) {
     lista.innerHTML = '<p class="empty-message">No hay presupuestos establecidos</p>';
     return;
@@ -538,9 +602,6 @@ function mostrarPresupuestos() {
 
   lista.innerHTML = keys.map(category => {
     const estado = obtenerEstadoPresupuesto(category);
-    const spentVisible = convertFromVES(estado.spent, displayCurrency);
-    const budgetVisible = convertFromVES(estado.budgetAmountVES, displayCurrency);
-
     return `
       <div class="budget-item ${estado.warning ? "alerta" : ""} ${estado.exceeded ? "excedido" : ""}">
         <div>
@@ -551,7 +612,7 @@ function mostrarPresupuestos() {
           <div class="budget-progress">
             <div class="budget-progress-bar ${estado.exceeded ? "exceeded" : estado.warning ? "warning" : ""}" style="width:${Math.min(estado.percent, 100)}%"></div>
           </div>
-          <small>Gastado: ${formatMoney(spentVisible, displayCurrency)} / Presupuesto visible: ${formatMoney(budgetVisible, displayCurrency)}</small>
+          <small>Gastado: ${formatMoney(convertFromVES(estado.spent, displayCurrency), displayCurrency)} / Presupuesto visible: ${formatMoney(convertFromVES(estado.budgetAmountVES, displayCurrency), displayCurrency)}</small>
         </div>
         <div>
           <div>${estado.percent.toFixed(0)}%</div>
@@ -566,17 +627,10 @@ function mostrarAlertasPresupuesto() {
   const contenedor = document.getElementById("budgetAlerts");
   if (!contenedor) return;
 
-  const keys = Object.keys(budgets);
-
-  if (keys.length === 0) {
-    contenedor.innerHTML = "";
-    return;
-  }
-
-  const alertas = keys.map(category => {
+  const alertas = Object.keys(budgets).map(category => {
     const estado = obtenerEstadoPresupuesto(category);
-    if (estado.exceeded) return `<div class="alert-box danger">🚨 Has superado el presupuesto de ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
-    if (estado.warning) return `<div class="alert-box warning">⚠️ Estás cerca del límite en ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
+    if (estado.exceeded) return `<div class="alert-box danger">Has superado el presupuesto de ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
+    if (estado.warning) return `<div class="alert-box warning">Estás cerca del límite en ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
     return "";
   }).filter(Boolean);
 
@@ -595,18 +649,10 @@ function actualizarResumen() {
 
   const budgetUsed = totalBudgetVES > 0 ? (totalExpenseVES / totalBudgetVES) * 100 : 0;
 
-  if (document.getElementById("totalIncome")) {
-    document.getElementById("totalIncome").textContent = formatMoney(convertFromVES(totalIncomeVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("totalExpense")) {
-    document.getElementById("totalExpense").textContent = formatMoney(convertFromVES(totalExpenseVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("balance")) {
-    document.getElementById("balance").textContent = formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("budgetUsed")) {
-    document.getElementById("budgetUsed").textContent = `${budgetUsed.toFixed(0)}%`;
-  }
+  document.getElementById("totalIncome").textContent = formatMoney(convertFromVES(totalIncomeVES, displayCurrency), displayCurrency);
+  document.getElementById("totalExpense").textContent = formatMoney(convertFromVES(totalExpenseVES, displayCurrency), displayCurrency);
+  document.getElementById("balance").textContent = formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency);
+  document.getElementById("budgetUsed").textContent = `${budgetUsed.toFixed(0)}%`;
 }
 
 function actualizarResumenAhorro() {
@@ -616,26 +662,15 @@ function actualizarResumenAhorro() {
   const faltanteVES = Math.max(savingGoal - ahorroActualVES, 0);
   const progress = savingGoal > 0 ? Math.min((ahorroActualVES / savingGoal) * 100, 100) : 0;
 
-  if (document.getElementById("savingGoalAmount")) {
-    document.getElementById("savingGoalAmount").textContent = formatMoney(convertFromVES(savingGoal, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("currentSavings")) {
-    document.getElementById("currentSavings").textContent = formatMoney(convertFromVES(ahorroActualVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("remainingSavings")) {
-    document.getElementById("remainingSavings").textContent = formatMoney(convertFromVES(faltanteVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("savingsProgressText")) {
-    document.getElementById("savingsProgressText").textContent = `${progress.toFixed(0)}%`;
-  }
-  if (document.getElementById("savingGoalBar")) {
-    document.getElementById("savingGoalBar").style.width = `${progress}%`;
-  }
+  document.getElementById("savingGoalAmount").textContent = formatMoney(convertFromVES(savingGoal, displayCurrency), displayCurrency);
+  document.getElementById("currentSavings").textContent = formatMoney(convertFromVES(ahorroActualVES, displayCurrency), displayCurrency);
+  document.getElementById("remainingSavings").textContent = formatMoney(convertFromVES(faltanteVES, displayCurrency), displayCurrency);
+  document.getElementById("savingsProgressText").textContent = `${progress.toFixed(0)}%`;
+  document.getElementById("savingGoalBar").style.width = `${progress}%`;
 }
 
 function guardarMetaAhorro(e) {
   e.preventDefault();
-
   const value = parseFloat(document.getElementById("savingGoalInput")?.value);
   const currency = document.getElementById("savingGoalCurrency")?.value;
 
@@ -645,13 +680,7 @@ function guardarMetaAhorro(e) {
   }
 
   savingGoal = convertToVES(value, currency);
-
-  localStorage.setItem("savingGoal", JSON.stringify({
-    amountVES: savingGoal,
-    amountOriginal: value,
-    currency
-  }));
-
+  localStorage.setItem("savingGoal", JSON.stringify({ amountVES: savingGoal, amountOriginal: value, currency }));
   renderTodo();
   alert("✅ Meta de ahorro guardada.");
 }
@@ -662,20 +691,50 @@ function cargarMetaAhorro() {
 
   try {
     const parsed = JSON.parse(saved);
-
     if (typeof parsed === "number") {
       savingGoal = parsed;
     } else {
       savingGoal = parsed.amountVES || 0;
-      const input = document.getElementById("savingGoalInput");
-      const currencySelect = document.getElementById("savingGoalCurrency");
-
-      if (input) input.value = parsed.amountOriginal ?? parsed.amountVES ?? 0;
-      if (currencySelect) currencySelect.value = parsed.currency || "VES";
+      if (document.getElementById("savingGoalInput")) document.getElementById("savingGoalInput").value = parsed.amountOriginal ?? parsed.amountVES ?? 0;
+      if (document.getElementById("savingGoalCurrency")) document.getElementById("savingGoalCurrency").value = parsed.currency || "VES";
     }
   } catch {
     savingGoal = 0;
   }
+}
+
+function obtenerProximaCuota(purchase) {
+  return purchase.installments.find(inst => !inst.paid) || null;
+}
+
+function obtenerProximoPagoGlobal() {
+  let proxima = null;
+
+  casheaPurchases.forEach(purchase => {
+    const cuota = obtenerProximaCuota(purchase);
+    if (!cuota) return;
+    if (!proxima || cuota.dueDate < proxima.dueDate) {
+      proxima = { ...cuota, purchaseDescription: purchase.description, currency: purchase.currency };
+    }
+  });
+
+  return proxima;
+}
+
+function mostrarAlertasCashea() {
+  const contenedor = document.getElementById("casheaAlerts");
+  if (!contenedor) return;
+
+  const alertas = [];
+  casheaPurchases.forEach(purchase => {
+    purchase.installments.forEach(inst => {
+      if (!inst.paid && fechaEstaVencida(inst.dueDate)) {
+        alertas.push(`<div class="alert-box danger">Cuota vencida: ${escapeHtml(purchase.description)} - cuota ${inst.number} (${formatearFecha(inst.dueDate)})</div>`);
+      }
+    });
+  });
+
+  contenedor.innerHTML = alertas.join("");
 }
 
 function guardarCompraCashea(e) {
@@ -689,9 +748,10 @@ function guardarCompraCashea(e) {
   const initialOriginal = parseFloat(document.getElementById("casheaInitialAmountInput")?.value);
   const installmentsCount = parseInt(document.getElementById("casheaInstallmentsCount")?.value, 10);
   const installmentOriginal = parseFloat(document.getElementById("casheaInstallmentAmount")?.value);
+  const firstPaymentDate = document.getElementById("casheaFirstPaymentDate")?.value;
   const notes = document.getElementById("casheaNotes")?.value.trim();
 
-  if (!description || !category || !date || !currency || isNaN(totalOriginal) || isNaN(initialOriginal) || isNaN(installmentsCount) || isNaN(installmentOriginal)) {
+  if (!description || !category || !date || !currency || !firstPaymentDate || isNaN(totalOriginal) || isNaN(initialOriginal) || isNaN(installmentsCount) || isNaN(installmentOriginal)) {
     alert("Completa todos los campos de Cashea.");
     return;
   }
@@ -706,6 +766,12 @@ function guardarCompraCashea(e) {
     return;
   }
 
+  const totalCalculado = initialOriginal + installmentOriginal * installmentsCount;
+  if (Math.abs(totalCalculado - totalOriginal) > 0.01) {
+    if (!confirm("La suma de inicial + cuotas no coincide exactamente con el monto total. ¿Deseas guardar de todos modos?")) return;
+  }
+
+  const purchaseId = Date.now();
   const totalVES = convertToVES(totalOriginal, currency);
   const initialVES = convertToVES(initialOriginal, currency);
   const installmentVES = convertToVES(installmentOriginal, currency);
@@ -714,11 +780,13 @@ function guardarCompraCashea(e) {
     number: index + 1,
     amountOriginal: installmentOriginal,
     amountVES: installmentVES,
-    paid: false
+    paid: false,
+    dueDate: sumarMeses(firstPaymentDate, index),
+    paidDate: null
   }));
 
   casheaPurchases.push({
-    id: Date.now(),
+    id: purchaseId,
     description,
     category,
     date,
@@ -731,16 +799,30 @@ function guardarCompraCashea(e) {
     installmentOriginal,
     installmentVES,
     installmentsCount,
+    firstPaymentDate,
     installments,
     notes: notes || ""
   });
 
+  if (initialOriginal > 0) {
+    crearTransaccionDesdeCashea({
+      description: `${description} - Inicial Cashea`,
+      category,
+      date,
+      amountOriginal: initialOriginal,
+      currency,
+      casheaPurchaseId: purchaseId,
+      esInicial: true
+    });
+  }
+
   guardarDatos();
   document.getElementById("casheaForm")?.reset();
-  if (document.getElementById("casheaCurrency")) document.getElementById("casheaCurrency").value = "VES";
+  document.getElementById("casheaCurrency").value = "VES";
   configurarFecha();
+  llenarMesesReporte();
   renderTodo();
-  alert("✅ Compra Cashea guardada.");
+  alert("✅ Compra Cashea guardada con cronograma de cuotas.");
 }
 
 function toggleCasheaInstallment(purchaseId, installmentNumber) {
@@ -751,27 +833,53 @@ function toggleCasheaInstallment(purchaseId, installmentNumber) {
   if (!installment) return;
 
   installment.paid = !installment.paid;
+  installment.paidDate = installment.paid ? new Date().toISOString().slice(0, 10) : null;
+
+  if (installment.paid) {
+    crearTransaccionDesdeCashea({
+      description: `${purchase.description} - Cuota ${installment.number} Cashea`,
+      category: purchase.category,
+      date: installment.paidDate,
+      amountOriginal: installment.amountOriginal,
+      currency: purchase.currency,
+      casheaPurchaseId: purchase.id,
+      cuotaNumero: installment.number,
+      esInicial: false
+    });
+  } else {
+    eliminarTransaccionCashea(purchase.id, installment.number, false);
+  }
+
   guardarDatos();
+  llenarMesesReporte();
   renderTodo();
 }
 
 function eliminarCompraCashea(id) {
   if (!confirm("¿Deseas eliminar esta compra Cashea?")) return;
+
+  eliminarTransaccionCashea(id, null, true);
+  const compra = casheaPurchases.find(item => item.id === id);
+
+  if (compra) {
+    compra.installments.forEach(inst => eliminarTransaccionCashea(id, inst.number, false));
+  }
+
   casheaPurchases = casheaPurchases.filter(item => item.id !== id);
   guardarDatos();
+  llenarMesesReporte();
   renderTodo();
 }
 
 function calcularResumenCompraCashea(purchase) {
-  const paidInstallmentsVES = purchase.installments
-    .filter(item => item.paid)
-    .reduce((sum, item) => sum + item.amountVES, 0);
-
+  const paidInstallmentsVES = purchase.installments.filter(item => item.paid).reduce((sum, item) => sum + item.amountVES, 0);
   const paidTotalVES = purchase.initialVES + paidInstallmentsVES;
   const pendingVES = Math.max(purchase.totalVES - paidTotalVES, 0);
   const pendingInstallments = purchase.installments.filter(item => !item.paid).length;
+  const nextInstallment = purchase.installments.find(item => !item.paid) || null;
+  const overdueCount = purchase.installments.filter(item => !item.paid && fechaEstaVencida(item.dueDate)).length;
 
-  return { paidTotalVES, pendingVES, pendingInstallments };
+  return { paidTotalVES, pendingVES, pendingInstallments, nextInstallment, overdueCount };
 }
 
 function mostrarComprasCashea() {
@@ -796,6 +904,9 @@ function mostrarComprasCashea() {
               <h3>${escapeHtml(purchase.description)}</h3>
               <div class="transaction-date">${formatearFecha(purchase.date)}</div>
               <div class="transaction-original">Monto original: ${formatMoney(purchase.totalOriginal, purchase.currency)} · ${currencyLabels[purchase.currency]}</div>
+              <div class="transaction-original">Inicial: ${formatMoney(purchase.initialOriginal, purchase.currency)} · Cuotas: ${purchase.installmentsCount} de ${formatMoney(purchase.installmentOriginal, purchase.currency)}</div>
+              <div class="transaction-original">Próxima cuota: ${resumen.nextInstallment ? `#${resumen.nextInstallment.number} - ${formatearFecha(resumen.nextInstallment.dueDate)}` : "Sin cuotas pendientes"}</div>
+              ${resumen.overdueCount > 0 ? `<div class="transaction-notes">Tienes ${resumen.overdueCount} cuota(s) vencida(s)</div>` : ""}
             </div>
             <button class="btn btn-danger btn-small" onclick="eliminarCompraCashea(${purchase.id})">Eliminar</button>
           </div>
@@ -822,19 +933,23 @@ function mostrarComprasCashea() {
           <div class="cashea-installments">
             <h4>Cuotas</h4>
             ${purchase.installments.map(item => `
-              <div class="cashea-installment ${item.paid ? "paid" : ""}">
+              <div class="cashea-installment ${item.paid ? "paid" : ""} ${!item.paid && fechaEstaVencida(item.dueDate) ? "overdue" : ""}">
                 <div>
                   <strong>Cuota ${item.number}</strong>
-                  <div class="transaction-original">${formatMoney(convertFromVES(item.amountVES, displayCurrency), displayCurrency)}</div>
+                  <div class="transaction-original">${formatMoney(item.amountOriginal, purchase.currency)}</div>
+                  <div class="transaction-date">Vence: ${formatearFecha(item.dueDate)}</div>
+                  <div class="transaction-date">
+                    ${item.paid ? `Pagada el ${formatearFecha(item.paidDate)}` : (fechaEstaVencida(item.dueDate) ? "Vencida" : "Pendiente por pagar")}
+                  </div>
                 </div>
                 <button class="btn ${item.paid ? "btn-secondary" : "btn-primary"} btn-small" onclick="toggleCasheaInstallment(${purchase.id}, ${item.number})">
-                  ${item.paid ? "Pagada" : "Marcar pagada"}
+                  ${item.paid ? "Quitar pago" : "Marcar pagada"}
                 </button>
               </div>
             `).join("")}
           </div>
 
-          ${purchase.notes ? `<div class="transaction-notes">📝 ${escapeHtml(purchase.notes)}</div>` : ""}
+          ${purchase.notes ? `<div class="transaction-notes">${escapeHtml(purchase.notes)}</div>` : ""}
         </div>
       `;
     }).join("");
@@ -842,34 +957,14 @@ function mostrarComprasCashea() {
 
 function actualizarResumenCashea() {
   const totalVES = casheaPurchases.reduce((sum, item) => sum + item.totalVES, 0);
+  const paidVES = casheaPurchases.reduce((sum, item) => sum + calcularResumenCompraCashea(item).paidTotalVES, 0);
+  const pendingVES = casheaPurchases.reduce((sum, item) => sum + calcularResumenCompraCashea(item).pendingVES, 0);
+  const nextPayment = obtenerProximoPagoGlobal();
 
-  const paidVES = casheaPurchases.reduce((sum, item) => {
-    const resumen = calcularResumenCompraCashea(item);
-    return sum + resumen.paidTotalVES;
-  }, 0);
-
-  const pendingVES = casheaPurchases.reduce((sum, item) => {
-    const resumen = calcularResumenCompraCashea(item);
-    return sum + resumen.pendingVES;
-  }, 0);
-
-  const pendingInstallments = casheaPurchases.reduce((sum, item) => {
-    const resumen = calcularResumenCompraCashea(item);
-    return sum + resumen.pendingInstallments;
-  }, 0);
-
-  if (document.getElementById("casheaTotalAmount")) {
-    document.getElementById("casheaTotalAmount").textContent = formatMoney(convertFromVES(totalVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("casheaPaidAmount")) {
-    document.getElementById("casheaPaidAmount").textContent = formatMoney(convertFromVES(paidVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("casheaPendingAmount")) {
-    document.getElementById("casheaPendingAmount").textContent = formatMoney(convertFromVES(pendingVES, displayCurrency), displayCurrency);
-  }
-  if (document.getElementById("casheaPendingInstallments")) {
-    document.getElementById("casheaPendingInstallments").textContent = pendingInstallments;
-  }
+  document.getElementById("casheaTotalAmount").textContent = formatMoney(convertFromVES(totalVES, displayCurrency), displayCurrency);
+  document.getElementById("casheaPaidAmount").textContent = formatMoney(convertFromVES(paidVES, displayCurrency), displayCurrency);
+  document.getElementById("casheaPendingAmount").textContent = formatMoney(convertFromVES(pendingVES, displayCurrency), displayCurrency);
+  document.getElementById("casheaNextPayment").textContent = nextPayment ? formatearFecha(nextPayment.dueDate) : "Sin cuotas";
 }
 
 function actualizarGraficos() {
@@ -879,12 +974,9 @@ function actualizarGraficos() {
 
 function actualizarGraficoGastos() {
   const gastosPorCategoria = {};
-
-  transactions
-    .filter(t => t.type === "gasto")
-    .forEach(t => {
-      gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
-    });
+  transactions.filter(t => t.type === "gasto").forEach(t => {
+    gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
+  });
 
   const labels = Object.keys(gastosPorCategoria).map(cat => `${getCategoryEmoji(cat)} ${getCategoryName(cat)}`);
   const data = Object.values(gastosPorCategoria).map(valor => convertFromVES(valor, displayCurrency));
@@ -933,8 +1025,7 @@ function llenarMesesReporte() {
   if (!select) return;
 
   const mesesUnicos = [...new Set(transactions.map(t => t.date.slice(0, 7)))].sort().reverse();
-  select.innerHTML = '<option value="">Selecciona un mes</option>' +
-    mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
+  select.innerHTML = '<option value="">Selecciona un mes</option>' + mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
 }
 
 function generarReporte() {
@@ -995,7 +1086,6 @@ function generarReporte() {
 function cambiarTab(tab) {
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-
   document.getElementById(`tab-${tab}`)?.classList.add("active");
 
   const botones = document.querySelectorAll(".tab-btn");
@@ -1016,11 +1106,7 @@ function toggleDarkMode() {
 function inicializarTema() {
   const savedTheme = localStorage.getItem("themeMode") || "dark";
   document.body.classList.remove("light-mode");
-
-  if (savedTheme === "light") {
-    document.body.classList.add("light-mode");
-  }
-
+  if (savedTheme === "light") document.body.classList.add("light-mode");
   actualizarBotonTema();
 }
 
@@ -1116,7 +1202,11 @@ function cargarDatos() {
       amountOriginal: t.amountOriginal ?? t.amount ?? t.amountVES ?? 0,
       currency: t.currency || "VES",
       amountVES: t.amountVES ?? t.amount ?? 0,
-      notes: t.notes || ""
+      notes: t.notes || "",
+      origin: t.origin || null,
+      casheaPurchaseId: t.casheaPurchaseId ?? null,
+      cuotaNumero: t.cuotaNumero ?? null,
+      esInicial: Boolean(t.esInicial)
     }));
 
     budgets = parsed.budgets || {};
@@ -1126,7 +1216,9 @@ function cargarDatos() {
       installments: (item.installments || []).map(inst => ({
         ...inst,
         number: Number(inst.number),
-        paid: Boolean(inst.paid)
+        paid: Boolean(inst.paid),
+        dueDate: inst.dueDate,
+        paidDate: inst.paidDate || null
       }))
     }));
   } catch {
@@ -1163,7 +1255,7 @@ function exportarCSV() {
     return;
   }
 
-  const transaccionesHeader = "TIPO,id,descripcion,monto_original,moneda_original,monto_en_ves,categoria,subtipo,fecha,notas";
+  const header = "TIPO,id,descripcion,monto_original,moneda_original,monto_en_ves,categoria,subtipo,fecha,notas";
   const transaccionesRows = transactions.map(t => [
     "transaccion",
     t.id,
@@ -1190,7 +1282,7 @@ function exportarCSV() {
     escaparCSV(item.notes || "")
   ].join(","));
 
-  const csv = [transaccionesHeader, ...transaccionesRows, ...casheaRows].join("\n");
+  const csv = [header, ...transaccionesRows, ...casheaRows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -1220,15 +1312,10 @@ function limpiarDatos() {
   llenarMesesReporte();
   renderTodo();
 
-  const savingInput = document.getElementById("savingGoalInput");
-  const savingCurrency = document.getElementById("savingGoalCurrency");
-  const budgetCurrency = document.getElementById("budgetCurrency");
-  const casheaForm = document.getElementById("casheaForm");
-
-  if (savingInput) savingInput.value = "";
-  if (savingCurrency) savingCurrency.value = "VES";
-  if (budgetCurrency) budgetCurrency.value = "VES";
-  if (casheaForm) casheaForm.reset();
+  document.getElementById("savingGoalInput").value = "";
+  document.getElementById("savingGoalCurrency").value = "VES";
+  document.getElementById("budgetCurrency").value = "VES";
+  document.getElementById("casheaForm")?.reset();
 
   const reportContent = document.getElementById("reportContent");
   if (reportContent) {
@@ -1239,7 +1326,7 @@ function limpiarDatos() {
 }
 
 function formatearFecha(fecha) {
-  return new Date(fecha + "T00:00:00").toLocaleDateString("es-VE");
+  return new Date(`${fecha}T00:00:00`).toLocaleDateString("es-VE");
 }
 
 function formatearMes(valor) {
