@@ -767,13 +767,20 @@ function cambiarTab(tab) {
 }
 
 function toggleDarkMode() {
-  document.body.classList.toggle("dark-mode");
-  localStorage.setItem("darkMode", JSON.stringify(document.body.classList.contains("dark-mode")));
+  document.body.classList.toggle("light-mode");
+  localStorage.setItem(
+    "themeMode",
+    document.body.classList.contains("light-mode") ? "light" : "dark"
+  );
 }
 
 function inicializarTema() {
-  const darkMode = JSON.parse(localStorage.getItem("darkMode") || "false");
-  if (darkMode) document.body.classList.add("dark-mode");
+  const savedTheme = localStorage.getItem("themeMode") || "dark";
+  document.body.classList.remove("light-mode");
+
+  if (savedTheme === "light") {
+    document.body.classList.add("light-mode");
+  }
 }
 
 function guardarConfiguracionMoneda() {
