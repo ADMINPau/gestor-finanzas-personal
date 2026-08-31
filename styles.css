@@ -673,6 +673,10 @@ body.light-mode .cashea-mini-card {
   gap: 10px;
 }
 
+.cashea-installments h4 {
+  margin-bottom: 10px;
+}
+
 .cashea-installment {
   display: flex;
   justify-content: space-between;
