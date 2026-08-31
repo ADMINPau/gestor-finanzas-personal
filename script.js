@@ -1,5 +1,6 @@
 let transactions = [];
 let budgets = {};
+let casheaPurchases = [];
 let gastosChart = null;
 let balanceChart = null;
 let displayCurrency = "VES";
@@ -57,6 +58,9 @@ document.addEventListener("DOMContentLoaded", () => {
 function configurarFecha() {
   const dateInput = document.getElementById("date");
   if (dateInput && !dateInput.value) dateInput.valueAsDate = new Date();
+
+  const casheaDate = document.getElementById("casheaDate");
+  if (casheaDate && !casheaDate.value) casheaDate.valueAsDate = new Date();
 }
 
 function inicializarEventos() {
@@ -64,6 +68,7 @@ function inicializarEventos() {
   document.getElementById("budgetForm").addEventListener("submit", agregarPresupuesto);
   document.getElementById("categoryForm").addEventListener("submit", agregarCategoriaPersonalizada);
   document.getElementById("savingGoalForm").addEventListener("submit", guardarMetaAhorro);
+  document.getElementById("casheaForm").addEventListener("submit", guardarCompraCashea);
   document.getElementById("filterText").addEventListener("input", filtrarTransacciones);
   document.getElementById("filterCategory").addEventListener("change", filtrarTransacciones);
   document.getElementById("filterType").addEventListener("change", filtrarTransacciones);
@@ -79,13 +84,9 @@ function actualizarEncabezado() {
   const hora = ahoraCaracas.getHours();
   let saludo = "Hola";
 
-  if (hora >= 5 && hora < 12) {
-    saludo = "Buenos días";
-  } else if (hora >= 12 && hora < 19) {
-    saludo = "Buenas tardes";
-  } else {
-    saludo = "Buenas noches";
-  }
+  if (hora >= 5 && hora < 12) saludo = "Buenos días";
+  else if (hora >= 12 && hora < 19) saludo = "Buenas tardes";
+  else saludo = "Buenas noches";
 
   const titulo = document.getElementById("mainGreeting");
   const subtitulo = document.getElementById("mainSubtitle");
@@ -102,17 +103,14 @@ function renderTodo() {
   mostrarAlertasPresupuesto();
   actualizarResumen();
   actualizarResumenAhorro();
+  actualizarResumenCashea();
+  mostrarComprasCashea();
   actualizarGraficos();
   actualizarVistaConversion();
 }
 
 function formatMoney(value, currency = displayCurrency) {
-  const localeMap = {
-    VES: "es-VE",
-    USD: "en-US",
-    EUR: "es-ES",
-    USDT: "en-US"
-  };
+  const localeMap = { VES: "es-VE", USD: "en-US", EUR: "es-ES", USDT: "en-US" };
 
   if (currency === "USDT") return `${Number(value).toFixed(2)} USDT`;
 
@@ -158,11 +156,7 @@ function actualizarVistaConversion() {
     .filter(code => code !== currency)
     .map(code => {
       const converted = convertFromVES(amountVES, code);
-      return `
-        <div class="conversion-item">
-          <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong>
-        </div>
-      `;
+      return `<div class="conversion-item"><strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong></div>`;
     })
     .join("");
 
@@ -175,13 +169,9 @@ function actualizarVistaConversion() {
     .join("");
 
   listEl.innerHTML = `
-    <div class="conversion-item">
-      <strong>Monto en VES interno:</strong> ${formatMoney(amountVES, "VES")}
-    </div>
+    <div class="conversion-item"><strong>Monto en VES interno:</strong> ${formatMoney(amountVES, "VES")}</div>
     ${tasaBase}
-    <div class="conversion-item">
-      <strong>Referencia por unidad:</strong>
-    </div>
+    <div class="conversion-item"><strong>Referencia por unidad:</strong></div>
     ${oneUnitLines}
   `;
 }
@@ -199,27 +189,21 @@ function llenarSelectsCategorias() {
     .map(([key, value]) => `<option value="${key}">${value.emoji} ${value.name}</option>`)
     .join("");
 
-  const transactionSelect = document.getElementById("category");
-  const budgetSelect = document.getElementById("budgetCategory");
-  const filterSelect = document.getElementById("filterCategory");
+  const ids = ["category", "budgetCategory", "filterCategory", "casheaCategory"];
 
-  if (transactionSelect) {
-    const current = transactionSelect.value;
-    transactionSelect.innerHTML = `<option value="">Selecciona una categoría</option>${categoryOptions}`;
-    if (current && categories[current]) transactionSelect.value = current;
-  }
+  ids.forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
 
-  if (budgetSelect) {
-    const current = budgetSelect.value;
-    budgetSelect.innerHTML = `<option value="">Selecciona una categoría</option>${categoryOptions}`;
-    if (current && categories[current]) budgetSelect.value = current;
-  }
+    const current = select.value;
+    if (id === "filterCategory") {
+      select.innerHTML = `<option value="">Todas las categorías</option>${categoryOptions}`;
+    } else {
+      select.innerHTML = `<option value="">Selecciona una categoría</option>${categoryOptions}`;
+    }
 
-  if (filterSelect) {
-    const current = filterSelect.value;
-    filterSelect.innerHTML = `<option value="">Todas las categorías</option>${categoryOptions}`;
-    if (current && categories[current]) filterSelect.value = current;
-  }
+    if (current && categories[current]) select.value = current;
+  });
 }
 
 function agregarCategoriaPersonalizada(e) {
@@ -251,8 +235,9 @@ function eliminarCategoriaPersonalizada(key) {
 
   const usadaEnTransacciones = transactions.some(t => t.category === key);
   const usadaEnPresupuestos = Object.prototype.hasOwnProperty.call(budgets, key);
+  const usadaEnCashea = casheaPurchases.some(item => item.category === key);
 
-  if (usadaEnTransacciones || usadaEnPresupuestos) {
+  if (usadaEnTransacciones || usadaEnPresupuestos || usadaEnCashea) {
     alert("No puedes eliminar esta categoría porque ya está en uso.");
     return;
   }
@@ -309,16 +294,7 @@ function guardarTransaccion(e) {
 
   const amountVES = convertToVES(amount, transactionCurrency);
 
-  const payload = {
-    description,
-    amountOriginal: amount,
-    currency: transactionCurrency,
-    amountVES,
-    category,
-    type,
-    date,
-    notes
-  };
+  const payload = { description, amountOriginal: amount, currency: transactionCurrency, amountVES, category, type, date, notes };
 
   if (id) {
     const idNumber = Number(id);
@@ -358,7 +334,6 @@ function editarTransaccion(id) {
   document.getElementById("type").value = t.type;
   document.getElementById("date").value = t.date;
   document.getElementById("notes").value = t.notes || "";
-
   document.getElementById("transactionFormTitle").textContent = "✏️ Editando Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
   document.getElementById("cancelEditBtn").classList.remove("hidden");
@@ -639,6 +614,198 @@ function cargarMetaAhorro() {
   }
 }
 
+function guardarCompraCashea(e) {
+  e.preventDefault();
+
+  const description = document.getElementById("casheaDescription").value.trim();
+  const category = document.getElementById("casheaCategory").value;
+  const date = document.getElementById("casheaDate").value;
+  const currency = document.getElementById("casheaCurrency").value;
+  const totalOriginal = parseFloat(document.getElementById("casheaTotalAmountInput").value);
+  const initialOriginal = parseFloat(document.getElementById("casheaInitialAmountInput").value);
+  const installmentsCount = parseInt(document.getElementById("casheaInstallmentsCount").value, 10);
+  const installmentOriginal = parseFloat(document.getElementById("casheaInstallmentAmount").value);
+  const notes = document.getElementById("casheaNotes").value.trim();
+
+  if (!description || !category || !date || !currency || isNaN(totalOriginal) || isNaN(initialOriginal) || isNaN(installmentsCount) || isNaN(installmentOriginal)) {
+    alert("Completa todos los campos de Cashea.");
+    return;
+  }
+
+  if (totalOriginal <= 0 || initialOriginal < 0 || installmentsCount <= 0 || installmentOriginal < 0) {
+    alert("Los montos de Cashea deben ser válidos.");
+    return;
+  }
+
+  if (initialOriginal > totalOriginal) {
+    alert("La inicial no puede ser mayor al monto total.");
+    return;
+  }
+
+  const totalVES = convertToVES(totalOriginal, currency);
+  const initialVES = convertToVES(initialOriginal, currency);
+  const installmentVES = convertToVES(installmentOriginal, currency);
+  const financedVES = totalVES - initialVES;
+
+  const installments = Array.from({ length: installmentsCount }, (_, index) => ({
+    number: index + 1,
+    amountOriginal: installmentOriginal,
+    amountVES: installmentVES,
+    paid: false
+  }));
+
+  casheaPurchases.push({
+    id: Date.now(),
+    description,
+    category,
+    date,
+    currency,
+    totalOriginal,
+    totalVES,
+    initialOriginal,
+    initialVES,
+    financedVES,
+    installmentOriginal,
+    installmentVES,
+    installmentsCount,
+    installments,
+    notes
+  });
+
+  guardarDatos();
+  document.getElementById("casheaForm").reset();
+  document.getElementById("casheaCurrency").value = "VES";
+  configurarFecha();
+  renderTodo();
+  alert("✅ Compra Cashea guardada.");
+}
+
+function toggleCasheaInstallment(purchaseId, installmentNumber) {
+  const purchase = casheaPurchases.find(item => item.id === purchaseId);
+  if (!purchase) return;
+
+  const installment = purchase.installments.find(item => item.number === installmentNumber);
+  if (!installment) return;
+
+  installment.paid = !installment.paid;
+  guardarDatos();
+  renderTodo();
+}
+
+function eliminarCompraCashea(id) {
+  if (!confirm("¿Deseas eliminar esta compra Cashea?")) return;
+  casheaPurchases = casheaPurchases.filter(item => item.id !== id);
+  guardarDatos();
+  renderTodo();
+}
+
+function calcularResumenCompraCashea(purchase) {
+  const paidInstallmentsVES = purchase.installments
+    .filter(item => item.paid)
+    .reduce((sum, item) => sum + item.amountVES, 0);
+
+  const paidTotalVES = purchase.initialVES + paidInstallmentsVES;
+  const pendingVES = Math.max(purchase.totalVES - paidTotalVES, 0);
+  const pendingInstallments = purchase.installments.filter(item => !item.paid).length;
+
+  return { paidTotalVES, pendingVES, pendingInstallments };
+}
+
+function mostrarComprasCashea() {
+  const lista = document.getElementById("casheaList");
+  if (!lista) return;
+
+  if (casheaPurchases.length === 0) {
+    lista.innerHTML = '<p class="empty-message">No hay compras Cashea registradas</p>';
+    return;
+  }
+
+  lista.innerHTML = [...casheaPurchases]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .map(purchase => {
+      const resumen = calcularResumenCompraCashea(purchase);
+
+      return `
+        <div class="cashea-card">
+          <div class="cashea-header">
+            <div>
+              <div class="transaction-category">${getCategoryEmoji(purchase.category)} ${escapeHtml(getCategoryName(purchase.category))}</div>
+              <h3>${escapeHtml(purchase.description)}</h3>
+              <div class="transaction-date">${formatearFecha(purchase.date)}</div>
+              <div class="transaction-original">Monto original: ${formatMoney(purchase.totalOriginal, purchase.currency)} · ${currencyLabels[purchase.currency]}</div>
+            </div>
+            <button class="btn btn-danger btn-small" onclick="eliminarCompraCashea(${purchase.id})">Eliminar</button>
+          </div>
+
+          <div class="cashea-summary-grid">
+            <div class="cashea-mini-card">
+              <span>Total</span>
+              <strong>${formatMoney(convertFromVES(purchase.totalVES, displayCurrency), displayCurrency)}</strong>
+            </div>
+            <div class="cashea-mini-card">
+              <span>Inicial</span>
+              <strong>${formatMoney(convertFromVES(purchase.initialVES, displayCurrency), displayCurrency)}</strong>
+            </div>
+            <div class="cashea-mini-card">
+              <span>Pagado</span>
+              <strong>${formatMoney(convertFromVES(resumen.paidTotalVES, displayCurrency), displayCurrency)}</strong>
+            </div>
+            <div class="cashea-mini-card">
+              <span>Pendiente</span>
+              <strong>${formatMoney(convertFromVES(resumen.pendingVES, displayCurrency), displayCurrency)}</strong>
+            </div>
+          </div>
+
+          <div class="cashea-installments">
+            <h4>Cuotas</h4>
+            ${purchase.installments.map(item => `
+              <div class="cashea-installment ${item.paid ? "paid" : ""}">
+                <div>
+                  <strong>Cuota ${item.number}</strong>
+                  <div class="transaction-original">${formatMoney(convertFromVES(item.amountVES, displayCurrency), displayCurrency)}</div>
+                </div>
+                <button class="btn ${item.paid ? "btn-secondary" : "btn-primary"} btn-small" onclick="toggleCasheaInstallment(${purchase.id}, ${item.number})">
+                  ${item.paid ? "Pagada" : "Marcar pagada"}
+                </button>
+              </div>
+            `).join("")}
+          </div>
+
+          ${purchase.notes ? `<div class="transaction-notes">📝 ${escapeHtml(purchase.notes)}</div>` : ""}
+        </div>
+      `;
+    }).join("");
+}
+
+function actualizarResumenCashea() {
+  const totalVES = casheaPurchases.reduce((sum, item) => sum + item.totalVES, 0);
+
+  const paidVES = casheaPurchases.reduce((sum, item) => {
+    const resumen = calcularResumenCompraCashea(item);
+    return sum + resumen.paidTotalVES;
+  }, 0);
+
+  const pendingVES = casheaPurchases.reduce((sum, item) => {
+    const resumen = calcularResumenCompraCashea(item);
+    return sum + resumen.pendingVES;
+  }, 0);
+
+  const pendingInstallments = casheaPurchases.reduce((sum, item) => {
+    const resumen = calcularResumenCompraCashea(item);
+    return sum + resumen.pendingInstallments;
+  }, 0);
+
+  const totalEl = document.getElementById("casheaTotalAmount");
+  const paidEl = document.getElementById("casheaPaidAmount");
+  const pendingEl = document.getElementById("casheaPendingAmount");
+  const installmentsEl = document.getElementById("casheaPendingInstallments");
+
+  if (totalEl) totalEl.textContent = formatMoney(convertFromVES(totalVES, displayCurrency), displayCurrency);
+  if (paidEl) paidEl.textContent = formatMoney(convertFromVES(paidVES, displayCurrency), displayCurrency);
+  if (pendingEl) pendingEl.textContent = formatMoney(convertFromVES(pendingVES, displayCurrency), displayCurrency);
+  if (installmentsEl) installmentsEl.textContent = pendingInstallments;
+}
+
 function actualizarGraficos() {
   actualizarGraficoGastos();
   actualizarGraficoBalance();
@@ -646,6 +813,7 @@ function actualizarGraficos() {
 
 function actualizarGraficoGastos() {
   const gastosPorCategoria = {};
+
   transactions.filter(t => t.type === "gasto").forEach(t => {
     gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
   });
@@ -760,7 +928,7 @@ function cambiarTab(tab) {
   document.getElementById(`tab-${tab}`).classList.add("active");
 
   const botones = document.querySelectorAll(".tab-btn");
-  const mapa = { transacciones: 0, graficos: 1, reportes: 2, configuracion: 3 };
+  const mapa = { transacciones: 0, cashea: 1, graficos: 2, reportes: 3, configuracion: 4 };
   botones[mapa[tab]].classList.add("active");
 
   if (tab === "graficos") setTimeout(actualizarGraficos, 100);
@@ -768,19 +936,13 @@ function cambiarTab(tab) {
 
 function toggleDarkMode() {
   document.body.classList.toggle("light-mode");
-  localStorage.setItem(
-    "themeMode",
-    document.body.classList.contains("light-mode") ? "light" : "dark"
-  );
+  localStorage.setItem("themeMode", document.body.classList.contains("light-mode") ? "light" : "dark");
 }
 
 function inicializarTema() {
   const savedTheme = localStorage.getItem("themeMode") || "dark";
   document.body.classList.remove("light-mode");
-
-  if (savedTheme === "light") {
-    document.body.classList.add("light-mode");
-  }
+  if (savedTheme === "light") document.body.classList.add("light-mode");
 }
 
 function guardarConfiguracionMoneda() {
@@ -857,7 +1019,7 @@ function generarReporteSiExiste() {
 }
 
 function guardarDatos() {
-  localStorage.setItem("finanzasData", JSON.stringify({ transactions, budgets }));
+  localStorage.setItem("finanzasData", JSON.stringify({ transactions, budgets, casheaPurchases }));
 }
 
 function cargarDatos() {
@@ -866,6 +1028,7 @@ function cargarDatos() {
 
   try {
     const parsed = JSON.parse(datos);
+
     transactions = (parsed.transactions || []).map(t => ({
       ...t,
       id: Number(t.id),
@@ -876,9 +1039,19 @@ function cargarDatos() {
     }));
 
     budgets = parsed.budgets || {};
+    casheaPurchases = (parsed.casheaPurchases || []).map(item => ({
+      ...item,
+      id: Number(item.id),
+      installments: (item.installments || []).map(inst => ({
+        ...inst,
+        number: Number(inst.number),
+        paid: Boolean(inst.paid)
+      }))
+    }));
   } catch {
     transactions = [];
     budgets = {};
+    casheaPurchases = [];
   }
 }
 
@@ -886,6 +1059,7 @@ function descargarDatos() {
   const datos = {
     transactions,
     budgets,
+    casheaPurchases,
     displayCurrency,
     exchangeRates,
     categories,
@@ -903,13 +1077,14 @@ function descargarDatos() {
 }
 
 function exportarCSV() {
-  if (transactions.length === 0) {
-    alert("No hay transacciones para exportar.");
+  if (transactions.length === 0 && casheaPurchases.length === 0) {
+    alert("No hay datos para exportar.");
     return;
   }
 
-  const encabezados = ["id","descripcion","monto_original","moneda_original","monto_en_ves","categoria","tipo","fecha","notas"];
-  const filas = transactions.map(t => [
+  const transaccionesHeader = "TIPO,id,descripcion,monto_original,moneda_original,monto_en_ves,categoria,subtipo,fecha,notas";
+  const transaccionesRows = transactions.map(t => [
+    "transaccion",
     t.id,
     escaparCSV(t.description),
     t.amountOriginal,
@@ -919,9 +1094,22 @@ function exportarCSV() {
     t.type,
     t.date,
     escaparCSV(t.notes || "")
-  ]);
+  ].join(","));
 
-  const csv = [encabezados.join(","), ...filas.map(f => f.join(","))].join("\n");
+  const casheaRows = casheaPurchases.map(item => [
+    "cashea",
+    item.id,
+    escaparCSV(item.description),
+    item.totalOriginal,
+    item.currency,
+    item.totalVES,
+    escaparCSV(getCategoryName(item.category)),
+    "compra",
+    item.date,
+    escaparCSV(item.notes || "")
+  ].join(","));
+
+  const csv = [transaccionesHeader, ...transaccionesRows, ...casheaRows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -942,6 +1130,7 @@ function limpiarDatos() {
 
   transactions = [];
   budgets = {};
+  casheaPurchases = [];
   savingGoal = 0;
   localStorage.removeItem("savingGoal");
   guardarDatos();
@@ -958,6 +1147,9 @@ function limpiarDatos() {
   if (budgetCurrency) budgetCurrency.value = "VES";
 
   document.getElementById("reportContent").innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
+  const casheaForm = document.getElementById("casheaForm");
+  if (casheaForm) casheaForm.reset();
+  configurarFecha();
 }
 
 function formatearFecha(fecha) {
