@@ -10,7 +10,7 @@
   --warning-soft: rgba(245, 158, 11, 0.16);
   --danger-soft: rgba(239, 68, 68, 0.16);
   --edit-color: #38bdf8;
-  --edit-soft: rgba(56, 189, 248, 0.16);
+  --edit-soft: rgba(56, 189, 248, 0.18);
 
   --background-color: #0b1020;
   --background-overlay:
@@ -295,9 +295,13 @@ body {
 }
 
 .form-section.editing {
-  border-color: rgba(56, 189, 248, 0.55);
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25), 0 18px 38px rgba(8, 145, 178, 0.18);
-  background: linear-gradient(135deg, var(--edit-soft), var(--card-background));
+  border: 2px solid rgba(56, 189, 248, 0.95);
+  box-shadow:
+    0 0 0 2px rgba(56, 189, 248, 0.28),
+    0 0 30px rgba(56, 189, 248, 0.22),
+    0 18px 38px rgba(8, 145, 178, 0.22);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), var(--card-background));
+  transform: translateY(-2px);
 }
 
 .form-group {
