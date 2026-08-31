@@ -74,8 +74,8 @@
         <p class="amount" id="casheaPendingAmount">Bs 0,00</p>
       </div>
       <div class="summary-card budget">
-        <h3>Cuotas Pendientes</h3>
-        <p class="amount" id="casheaPendingInstallments">0</p>
+        <h3>Próximo Pago</h3>
+        <p class="amount" id="casheaNextPayment">Sin cuotas</p>
       </div>
     </section>
 
@@ -305,6 +305,11 @@
               </div>
 
               <div class="form-group">
+                <label for="casheaFirstPaymentDate">Fecha de la primera cuota:</label>
+                <input type="date" id="casheaFirstPaymentDate" required />
+              </div>
+
+              <div class="form-group">
                 <label for="casheaNotes">Notas:</label>
                 <textarea id="casheaNotes" rows="4"></textarea>
               </div>
@@ -317,6 +322,7 @@
         <main class="content">
           <section class="list-section list-cashea">
             <h2 class="section-title icon-card">Compras Cashea</h2>
+            <div id="casheaAlerts"></div>
             <div id="casheaList" class="transactions-list">
               <p class="empty-message">No hay compras Cashea registradas</p>
             </div>
