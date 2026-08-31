@@ -1,494 +1,169 @@
-:root {
-  --primary-color: #6366f1;
-  --secondary-color: #8b5cf6;
-  --success-color: #10b981;
-  --danger-color: #ef4444;
-  --warning-color: #f59e0b;
-  --warning-soft: #fef3c7;
-  --danger-soft: #fee2e2;
-  --background-color: #f3f4f6;
-  --card-background: #ffffff;
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --radius: 8px;
-  --transition: all 0.3s ease;
-}
-
-body.dark-mode {
-  --background-color: #0f172a;
-  --card-background: #1e293b;
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --border-color: #334155;
-  --warning-soft: rgba(245, 158, 11, 0.15);
-  --danger-soft: rgba(239, 68, 68, 0.15);
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: Arial, sans-serif;
-  background: var(--background-color);
-  color: var(--text-primary);
-  line-height: 1.6;
-  transition: var(--transition);
-}
-
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.header {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
-  padding: 30px;
-  border-radius: var(--radius);
-  margin-bottom: 30px;
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  align-items: center;
-}
-
-.subtitle {
-  opacity: 0.95;
-}
-
-.header-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.summary-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 25px;
-}
-
-.summary-card {
-  background: var(--card-background);
-  padding: 20px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border-left: 5px solid;
-}
-
-.summary-card h3 {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin-bottom: 10px;
-}
-
-.summary-card .amount {
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.income { border-left-color: var(--success-color); }
-.expense { border-left-color: var(--danger-color); }
-.balance { border-left-color: var(--primary-color); }
-.budget { border-left-color: var(--warning-color); }
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.tab-btn {
-  border: none;
-  background: var(--card-background);
-  color: var(--text-primary);
-  padding: 12px 18px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  box-shadow: var(--shadow);
-}
-
-.tab-btn.active {
-  background: var(--primary-color);
-  color: white;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-.main-content {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 25px;
-}
-
-.sidebar,
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.form-section,
-.list-section,
-.chart-section,
-.report-section,
-.rate-card {
-  background: var(--card-background);
-  padding: 20px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-.form-section h2,
-.list-section h2,
-.chart-section h2,
-.report-section h2,
-.rate-card h3 {
-  margin-bottom: 15px;
-}
-
-.form-group {
-  margin-bottom: 14px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: bold;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea,
-.filter-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--card-background);
-  color: var(--text-primary);
-  font-family: inherit;
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 90px;
-}
-
-.filters,
-.report-filters {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.filter-input {
-  flex: 1;
-  min-width: 180px;
-}
-
-.btn {
-  border: none;
-  border-radius: var(--radius);
-  padding: 10px 16px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-primary {
-  width: 100%;
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn-secondary {
-  background: rgba(255,255,255,0.18);
-  color: white;
-}
-
-.filter-reset-btn {
-  width: auto;
-  background: var(--text-secondary);
-}
-
-.btn-danger {
-  background: var(--danger-color);
-  color: white;
-}
-
-.btn-warning {
-  background: var(--warning-color);
-  color: white;
-}
-
-.btn-small {
-  padding: 6px 10px;
-  font-size: 0.85rem;
-}
-
-.full-width {
-  width: 100%;
-  margin-top: 10px;
-}
-
-.hidden {
-  display: none;
-}
-
-.budgets-list,
-.transactions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.transaction-item,
-.budget-item,
-.report-item,
-.custom-category-item {
-  background: rgba(0,0,0,0.03);
-  border-radius: var(--radius);
-  padding: 14px;
-}
-
-body.dark-mode .transaction-item,
-body.dark-mode .budget-item,
-body.dark-mode .report-item,
-body.dark-mode .rate-card,
-body.dark-mode .custom-category-item,
-body.dark-mode .conversion-box {
-  background: rgba(255,255,255,0.05);
-}
-
-.transaction-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  border-left: 4px solid transparent;
-}
-
-.transaction-item.gasto {
-  border-left-color: var(--danger-color);
-}
-
-.transaction-item.ingreso {
-  border-left-color: var(--success-color);
-}
-
-.transaction-info {
-  flex: 1;
-}
-
-.transaction-category {
-  font-weight: bold;
-}
-
-.transaction-description,
-.transaction-date,
-.transaction-notes,
-.transaction-original,
-.conversion-source,
-.config-help {
-  color: var(--text-secondary);
-  font-size: 0.92rem;
-}
-
-.transaction-notes {
-  margin-top: 6px;
-  white-space: pre-wrap;
-}
-
-.transaction-original {
-  margin-top: 4px;
-}
-
-.transaction-amount {
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-
-.transaction-amount.gasto {
-  color: var(--danger-color);
-}
-
-.transaction-amount.ingreso {
-  color: var(--success-color);
-}
-
-.transaction-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.budget-item.alerta {
-  border-left: 4px solid var(--warning-color);
-}
-
-.budget-item.excedido {
-  border-left: 4px solid var(--danger-color);
-}
-
-.budget-progress {
-  width: 100%;
-  height: 10px;
-  background: #dbeafe;
-  border-radius: 999px;
-  overflow: hidden;
-  margin: 8px 0;
-}
-
-body.dark-mode .budget-progress {
-  background: #334155;
-}
-
-.budget-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--success-color), var(--warning-color));
-}
-
-.budget-progress-bar.warning {
-  background: var(--warning-color);
-}
-
-.budget-progress-bar.exceeded {
-  background: var(--danger-color);
-}
-
-.alert-box {
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-
-.alert-box.warning {
-  background: var(--warning-soft);
-  color: #92400e;
-}
-
-.alert-box.danger {
-  background: var(--danger-soft);
-  color: #991b1b;
-}
-
-body.dark-mode .alert-box.warning {
-  color: #fcd34d;
-}
-
-body.dark-mode .alert-box.danger {
-  color: #fca5a5;
-}
-
-.charts-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.chart-wrapper {
-  height: 320px;
-}
-
-.empty-message {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: 20px;
-}
-
-.report-item-details,
-.saving-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.report-detail-label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.report-detail-value {
-  font-size: 1.1rem;
-  font-weight: bold;
-}
-
-.custom-category-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.custom-category-name {
-  font-weight: bold;
-}
-
-.conversion-box {
-  background: var(--card-background);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 14px;
-}
-
-.conversion-box h3 {
-  margin-bottom: 8px;
-  font-size: 1rem;
-}
-
-.conversion-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.conversion-item {
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: rgba(0,0,0,0.03);
-  font-size: 0.94rem;
-}
-
-body.dark-mode .conversion-item {
-  background: rgba(255,255,255,0.05);
-}
-
-@media (max-width: 950px) {
-  .main-content,
-  .charts-container {
-    grid-template-columns: 1fr;
+let transactions = [];
+let budgets = {};
+let gastosChart = null;
+let balanceChart = null;
+let displayCurrency = "VES";
+let savingGoal = 0;
+
+let exchangeRates = {
+  VES: 1,
+  USD: 36.5,
+  EUR: 39.8,
+  USDT: 37.1
+};
+
+let categories = {
+  alimentacion: { name: "Alimentación", emoji: "🍔", custom: false },
+  transporte: { name: "Transporte", emoji: "🚗", custom: false },
+  servicios: { name: "Servicios", emoji: "📱", custom: false },
+  salud: { name: "Salud", emoji: "🏥", custom: false },
+  entretenimiento: { name: "Entretenimiento", emoji: "🎮", custom: false },
+  educacion: { name: "Educación", emoji: "📚", custom: false },
+  trabajo: { name: "Trabajo", emoji: "💼", custom: false },
+  otro: { name: "Otro", emoji: "📌", custom: false }
+};
+
+const currencyLabels = {
+  VES: "Bolívar (VES)",
+  USD: "USD BCV (simulado)",
+  EUR: "EUR BCV (simulado)",
+  USDT: "USDT Binance (simulado)"
+};
+
+const currencySources = {
+  VES: "Moneda base",
+  USD: "BCV simulado",
+  EUR: "BCV simulado",
+  USDT: "Binance simulado"
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  cargarDatos();
+  cargarTasas();
+  cargarConfiguracionMoneda();
+  cargarCategorias();
+  cargarMetaAhorro();
+  inicializarTema();
+  actualizarEncabezado();
+  configurarFecha();
+  inicializarEventos();
+  llenarSelectsCategorias();
+  llenarMesesReporte();
+  pintarFormularioTasas();
+  renderTodo();
+  actualizarVistaConversion();
+});
+
+function configurarFecha() {
+  const dateInput = document.getElementById("date");
+  if (dateInput && !dateInput.value) dateInput.valueAsDate = new Date();
+}
+
+function inicializarEventos() {
+  document.getElementById("transactionForm").addEventListener("submit", guardarTransaccion);
+  document.getElementById("budgetForm").addEventListener("submit", agregarPresupuesto);
+  document.getElementById("categoryForm").addEventListener("submit", agregarCategoriaPersonalizada);
+  document.getElementById("savingGoalForm").addEventListener("submit", guardarMetaAhorro);
+  document.getElementById("filterText").addEventListener("input", filtrarTransacciones);
+  document.getElementById("filterCategory").addEventListener("change", filtrarTransacciones);
+  document.getElementById("filterType").addEventListener("change", filtrarTransacciones);
+  document.getElementById("amount").addEventListener("input", actualizarVistaConversion);
+  document.getElementById("transactionCurrency").addEventListener("change", actualizarVistaConversion);
+}
+
+function actualizarEncabezado() {
+  const ahoraCaracas = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Caracas" })
+  );
+
+  const hora = ahoraCaracas.getHours();
+  let saludo = "Hola";
+
+  if (hora >= 5 && hora < 12) {
+    saludo = "Buenos días";
+  } else if (hora >= 12 && hora < 19) {
+    saludo = "Buenas tardes";
+  } else {
+    saludo = "Buenas noches";
+  }
+
+  const titulo = document.getElementById("mainGreeting");
+  const subtitulo = document.getElementById("mainSubtitle");
+
+  if (titulo) titulo.textContent = `${saludo}, Paula`;
+  if (subtitulo) subtitulo.textContent = "Bienvenida a tu Gestor de Finanzas Personal";
+}
+
+function renderTodo() {
+  llenarSelectsCategorias();
+  renderCategoriasPersonalizadas();
+  mostrarTransacciones();
+  mostrarPresupuestos();
+  mostrarAlertasPresupuesto();
+  actualizarResumen();
+  actualizarResumenAhorro();
+  actualizarGraficos();
+  actualizarVistaConversion();
+}
+
+function formatMoney(value, currency = displayCurrency) {
+  const localeMap = {
+    VES: "es-VE",
+    USD: "en-US",
+    EUR: "es-ES",
+    USDT: "en-US"
+  };
+
+  if (currency === "USDT") return `${Number(value).toFixed(2)} USDT`;
+
+  try {
+    return new Intl.NumberFormat(localeMap[currency] || "es-VE", {
+      style: "currency",
+      currency
+    }).format(value);
+  } catch {
+    return `${Number(value).toFixed(2)} ${currency}`;
   }
 }
 
-@media (max-width: 600px) {
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .transaction-item {
-    flex-direction: column;
-  }
-
-  .transaction-actions {
-    width: 100%;
-  }
+function convertToVES(amount, currency) {
+  if (currency === "VES") return amount;
+  return amount * (exchangeRates[currency] || 1);
 }
+
+function convertFromVES(amountVES, currency) {
+  if (currency === "VES") return amountVES;
+  return amountVES / (exchangeRates[currency] || 1);
+}
+
+function actualizarVistaConversion() {
+  const amount = parseFloat(document.getElementById("amount")?.value || "0");
+  const currency = document.getElementById("transactionCurrency")?.value || "VES";
+  const sourceEl = document.getElementById("conversionSource");
+  const listEl = document.getElementById("liveConversionList");
+
+  if (!sourceEl || !listEl) return;
+
+  sourceEl.textContent = `Fuente: ${currencySources[currency]}`;
+
+  if (isNaN(amount) || amount <= 0) {
+    listEl.innerHTML = '<p class="empty-message">Ingresa un monto para ver conversiones</p>';
+    return;
+  }
+
+  const amountVES = convertToVES(amount, currency);
+  const currencies = ["VES", "USD", "EUR", "USDT"];
+
+  const tasaBase = currencies
+    .filter(code => code !== currency)
+    .map(code => {
+      const converted = convertFromVES(amountVES, code);
+      return `
+        <div class="conversion-item">
+          <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong>
+        </div>
+      `;
+    })
+    .join("");
+
+  const oneUnitVES = convertToVES(1, currency);`*
