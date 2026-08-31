@@ -1,169 +1,700 @@
-let transactions = [];
-let budgets = {};
-let gastosChart = null;
-let balanceChart = null;
-let displayCurrency = "VES";
-let savingGoal = 0;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700;800&display=swap');
 
-let exchangeRates = {
-  VES: 1,
-  USD: 36.5,
-  EUR: 39.8,
-  USDT: 37.1
-};
+:root {
+  --primary-color: #7c3aed;
+  --secondary-color: #06b6d4;
+  --accent-color: #22c55e;
+  --success-color: #10b981;
+  --danger-color: #ef4444;
+  --warning-color: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+  --danger-soft: rgba(239, 68, 68, 0.16);
 
-let categories = {
-  alimentacion: { name: "Alimentación", emoji: "🍔", custom: false },
-  transporte: { name: "Transporte", emoji: "🚗", custom: false },
-  servicios: { name: "Servicios", emoji: "📱", custom: false },
-  salud: { name: "Salud", emoji: "🏥", custom: false },
-  entretenimiento: { name: "Entretenimiento", emoji: "🎮", custom: false },
-  educacion: { name: "Educación", emoji: "📚", custom: false },
-  trabajo: { name: "Trabajo", emoji: "💼", custom: false },
-  otro: { name: "Otro", emoji: "📌", custom: false }
-};
-
-const currencyLabels = {
-  VES: "Bolívar (VES)",
-  USD: "USD BCV (simulado)",
-  EUR: "EUR BCV (simulado)",
-  USDT: "USDT Binance (simulado)"
-};
-
-const currencySources = {
-  VES: "Moneda base",
-  USD: "BCV simulado",
-  EUR: "BCV simulado",
-  USDT: "Binance simulado"
-};
-
-document.addEventListener("DOMContentLoaded", () => {
-  cargarDatos();
-  cargarTasas();
-  cargarConfiguracionMoneda();
-  cargarCategorias();
-  cargarMetaAhorro();
-  inicializarTema();
-  actualizarEncabezado();
-  configurarFecha();
-  inicializarEventos();
-  llenarSelectsCategorias();
-  llenarMesesReporte();
-  pintarFormularioTasas();
-  renderTodo();
-  actualizarVistaConversion();
-});
-
-function configurarFecha() {
-  const dateInput = document.getElementById("date");
-  if (dateInput && !dateInput.value) dateInput.valueAsDate = new Date();
+  --background-color: #0b1020;
+  --background-overlay:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.25), transparent 30%),
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.20), transparent 28%),
+    linear-gradient(135deg, #0b1020, #11182d 55%, #0f172a);
+  --card-background: rgba(255, 255, 255, 0.08);
+  --card-strong: rgba(255, 255, 255, 0.12);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  --shadow-strong: 0 20px 45px rgba(0, 0, 0, 0.35);
+  --radius: 18px;
+  --transition: all 0.28s ease;
 }
 
-function inicializarEventos() {
-  document.getElementById("transactionForm").addEventListener("submit", guardarTransaccion);
-  document.getElementById("budgetForm").addEventListener("submit", agregarPresupuesto);
-  document.getElementById("categoryForm").addEventListener("submit", agregarCategoriaPersonalizada);
-  document.getElementById("savingGoalForm").addEventListener("submit", guardarMetaAhorro);
-  document.getElementById("filterText").addEventListener("input", filtrarTransacciones);
-  document.getElementById("filterCategory").addEventListener("change", filtrarTransacciones);
-  document.getElementById("filterType").addEventListener("change", filtrarTransacciones);
-  document.getElementById("amount").addEventListener("input", actualizarVistaConversion);
-  document.getElementById("transactionCurrency").addEventListener("change", actualizarVistaConversion);
+body.light-mode {
+  --background-color: #eef2ff;
+  --background-overlay:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.15), transparent 30%),
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.12), transparent 28%),
+    linear-gradient(135deg, #eef2ff, #f8fafc 60%, #e2e8f0);
+  --card-background: rgba(255, 255, 255, 0.72);
+  --card-strong: rgba(255, 255, 255, 0.92);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-color: rgba(15, 23, 42, 0.08);
+  --shadow: 0 10px 25px rgba(15, 23, 42, 0.10);
+  --shadow-strong: 0 18px 38px rgba(15, 23, 42, 0.16);
+  --warning-soft: rgba(245, 158, 11, 0.18);
+  --danger-soft: rgba(239, 68, 68, 0.16);
 }
 
-function actualizarEncabezado() {
-  const ahoraCaracas = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Caracas" })
-  );
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-  const hora = ahoraCaracas.getHours();
-  let saludo = "Hola";
+html {
+  scroll-behavior: smooth;
+}
 
-  if (hora >= 5 && hora < 12) {
-    saludo = "Buenos días";
-  } else if (hora >= 12 && hora < 19) {
-    saludo = "Buenas tardes";
-  } else {
-    saludo = "Buenas noches";
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--background-color);
+  background-image: var(--background-overlay);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  transition: var(--transition);
+}
+
+.container {
+  max-width: 1450px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(6, 182, 212, 0.18));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border-color);
+  color: white;
+  padding: 34px;
+  border-radius: 24px;
+  margin-bottom: 28px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  box-shadow: var(--shadow-strong);
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.12), transparent 40%),
+    linear-gradient(300deg, rgba(255,255,255,0.06), transparent 50%);
+  pointer-events: none;
+}
+
+.header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(124, 58, 237, 0.35);
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.subtitle {
+  color: rgba(255,255,255,0.92);
+  font-size: 1rem;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.summary-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.summary-card,
+.form-section,
+.list-section,
+.chart-section,
+.report-section,
+.rate-card,
+.conversion-box,
+.custom-category-item,
+.transaction-item,
+.budget-item,
+.report-item,
+.cashea-card {
+  background: var(--card-background);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+}
+
+.summary-card {
+  padding: 22px;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.summary-card:hover,
+.form-section:hover,
+.list-section:hover,
+.chart-section:hover,
+.report-section:hover,
+.rate-card:hover,
+.cashea-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-strong);
+}
+
+.summary-card::after {
+  content: "";
+  position: absolute;
+  top: -35px;
+  right: -35px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+}
+
+.summary-card h3 {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  margin-bottom: 12px;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+
+.summary-card .amount {
+  font-size: 2rem;
+  font-weight: 800;
+  position: relative;
+  z-index: 1;
+}
+
+.income { border-left: 4px solid #22c55e; }
+.expense { border-left: 4px solid #ef4444; }
+.balance { border-left: 4px solid #06b6d4; }
+.budget { border-left: 4px solid #f59e0b; }
+
+.tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  border: 1px solid var(--border-color);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  padding: 12px 18px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
+  backdrop-filter: blur(14px);
+}
+
+.tab-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,0.1);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 10px 20px rgba(124, 58, 237, 0.25);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.main-content {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 22px;
+}
+
+.sidebar,
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-section,
+.list-section,
+.chart-section,
+.report-section,
+.rate-card {
+  padding: 22px;
+  border-radius: 22px;
+}
+
+.form-section h2,
+.list-section h2,
+.chart-section h2,
+.report-section h2,
+.rate-card h3 {
+  margin-bottom: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 7px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea,
+.filter-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: var(--transition);
+}
+
+body.light-mode .form-group input,
+body.light-mode .form-group select,
+body.light-mode .form-group textarea,
+body.light-mode .filter-input {
+  background: rgba(255,255,255,0.75);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.filter-input:focus {
+  border-color: rgba(6, 182, 212, 0.65);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.14);
+  transform: translateY(-1px);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 95px;
+}
+
+.filters,
+.report-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: var(--transition);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  box-shadow: 0 10px 20px rgba(124, 58, 237, 0.22);
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.10);
+  color: white;
+  border-color: rgba(255,255,255,0.1);
+}
+
+body.light-mode .btn-secondary {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.74);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.filter-reset-btn {
+  width: auto;
+  background: linear-gradient(135deg, #475569, #64748b);
+  color: white;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+}
+
+.btn-small {
+  padding: 8px 11px;
+  font-size: 0.85rem;
+  width: auto;
+}
+
+.full-width {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+.budgets-list,
+.transactions-list,
+.conversion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transaction-item,
+.budget-item,
+.report-item,
+.custom-category-item,
+.conversion-item {
+  border-radius: 18px;
+  padding: 15px;
+}
+
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  border-left: 4px solid transparent;
+  transition: var(--transition);
+}
+
+.transaction-item:hover {
+  transform: translateX(4px);
+}
+
+.transaction-item.gasto {
+  border-left-color: var(--danger-color);
+}
+
+.transaction-item.ingreso {
+  border-left-color: var(--success-color);
+}
+
+.transaction-info {
+  flex: 1;
+}
+
+.transaction-category,
+.custom-category-name {
+  font-weight: 700;
+}
+
+.transaction-description {
+  font-size: 1rem;
+  margin-top: 2px;
+}
+
+.transaction-description,
+.transaction-date,
+.transaction-notes,
+.transaction-original,
+.conversion-source,
+.config-help {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.transaction-notes {
+  margin-top: 6px;
+  white-space: pre-wrap;
+}
+
+.transaction-original {
+  margin-top: 5px;
+}
+
+.transaction-amount {
+  font-weight: 800;
+  font-size: 1.08rem;
+  padding-top: 2px;
+}
+
+.transaction-amount.gasto {
+  color: var(--danger-color);
+}
+
+.transaction-amount.ingreso {
+  color: var(--success-color);
+}
+
+.transaction-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.budget-item.alerta {
+  border-left: 4px solid var(--warning-color);
+}
+
+.budget-item.excedido {
+  border-left: 4px solid var(--danger-color);
+}
+
+.budget-progress {
+  width: 100%;
+  height: 12px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.budget-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #06b6d4, #7c3aed);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+
+.budget-progress-bar.warning {
+  background: linear-gradient(90deg, #f59e0b, #f97316);
+}
+
+.budget-progress-bar.exceeded {
+  background: linear-gradient(90deg, #ef4444, #b91c1c);
+}
+
+.alert-box {
+  padding: 12px 14px;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.alert-box.warning {
+  background: var(--warning-soft);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.alert-box.danger {
+  background: var(--danger-soft);
+  color: #fda4af;
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.charts-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.chart-wrapper {
+  height: 320px;
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 18px;
+}
+
+.report-item-details,
+.saving-summary,
+.cashea-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.report-detail-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.report-detail-value {
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.custom-category-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.conversion-box {
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.conversion-box h3 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.conversion-item {
+  background: rgba(255,255,255,0.05);
+  font-size: 0.94rem;
+}
+
+body.light-mode .conversion-item {
+  background: rgba(255,255,255,0.72);
+}
+
+.cashea-card {
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.cashea-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.cashea-header h3 {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.cashea-mini-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+body.light-mode .cashea-mini-card {
+  background: rgba(255,255,255,0.72);
+}
+
+.cashea-mini-card span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.cashea-mini-card strong {
+  font-size: 1rem;
+}
+
+.cashea-installments h4 {
+  margin-bottom: 10px;
+}
+
+.cashea-installments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cashea-installment {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+body.light-mode .cashea-installment {
+  background: rgba(255,255,255,0.72);
+}
+
+.cashea-installment.paid {
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2);
+}
+
+@media (max-width: 950px) {
+  .main-content,
+  .charts-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 16px;
   }
 
-  const titulo = document.getElementById("mainGreeting");
-  const subtitulo = document.getElementById("mainSubtitle");
-
-  if (titulo) titulo.textContent = `${saludo}, Paula`;
-  if (subtitulo) subtitulo.textContent = "Bienvenida a tu Gestor de Finanzas Personal";
-}
-
-function renderTodo() {
-  llenarSelectsCategorias();
-  renderCategoriasPersonalizadas();
-  mostrarTransacciones();
-  mostrarPresupuestos();
-  mostrarAlertasPresupuesto();
-  actualizarResumen();
-  actualizarResumenAhorro();
-  actualizarGraficos();
-  actualizarVistaConversion();
-}
-
-function formatMoney(value, currency = displayCurrency) {
-  const localeMap = {
-    VES: "es-VE",
-    USD: "en-US",
-    EUR: "es-ES",
-    USDT: "en-US"
-  };
-
-  if (currency === "USDT") return `${Number(value).toFixed(2)} USDT`;
-
-  try {
-    return new Intl.NumberFormat(localeMap[currency] || "es-VE", {
-      style: "currency",
-      currency
-    }).format(value);
-  } catch {
-    return `${Number(value).toFixed(2)} ${currency}`;
-  }
-}
-
-function convertToVES(amount, currency) {
-  if (currency === "VES") return amount;
-  return amount * (exchangeRates[currency] || 1);
-}
-
-function convertFromVES(amountVES, currency) {
-  if (currency === "VES") return amountVES;
-  return amountVES / (exchangeRates[currency] || 1);
-}
-
-function actualizarVistaConversion() {
-  const amount = parseFloat(document.getElementById("amount")?.value || "0");
-  const currency = document.getElementById("transactionCurrency")?.value || "VES";
-  const sourceEl = document.getElementById("conversionSource");
-  const listEl = document.getElementById("liveConversionList");
-
-  if (!sourceEl || !listEl) return;
-
-  sourceEl.textContent = `Fuente: ${currencySources[currency]}`;
-
-  if (isNaN(amount) || amount <= 0) {
-    listEl.innerHTML = '<p class="empty-message">Ingresa un monto para ver conversiones</p>';
-    return;
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24px;
   }
 
-  const amountVES = convertToVES(amount, currency);
-  const currencies = ["VES", "USD", "EUR", "USDT"];
+  .transaction-item,
+  .cashea-header,
+  .cashea-installment {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-  const tasaBase = currencies
-    .filter(code => code !== currency)
-    .map(code => {
-      const converted = convertFromVES(amountVES, code);
-      return `
-        <div class="conversion-item">
-          <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong>
-        </div>
-      `;
-    })
-    .join("");
-
-  const oneUnitVES = convertToVES(1, currency);`*
+  .transaction-actions {
+    width: 100%;
+  }
+}
