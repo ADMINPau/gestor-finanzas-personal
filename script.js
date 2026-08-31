@@ -366,7 +366,8 @@ function editarTransaccion(id) {
   document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
   document.getElementById("cancelEditBtn").classList.remove("hidden");
 
-  const formSection = document.querySelector("#transactionForm")?.closest(".form-section");
+  const form = document.getElementById("transactionForm");
+  const formSection = form ? form.closest(".form-section") : null;
   if (formSection) formSection.classList.add("editing");
 
   actualizarVistaConversion();
@@ -385,7 +386,8 @@ function limpiarFormularioTransaccion() {
   document.getElementById("cancelEditBtn").classList.add("hidden");
   document.getElementById("transactionCurrency").value = "VES";
 
-  const formSection = document.querySelector("#transactionForm")?.closest(".form-section");
+  const form = document.getElementById("transactionForm");
+  const formSection = form ? form.closest(".form-section") : null;
   if (formSection) formSection.classList.remove("editing");
 
   configurarFecha();
