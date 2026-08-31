@@ -64,16 +64,16 @@ function configurarFecha() {
 }
 
 function inicializarEventos() {
-  document.getElementById("transactionForm").addEventListener("submit", guardarTransaccion);
-  document.getElementById("budgetForm").addEventListener("submit", agregarPresupuesto);
-  document.getElementById("categoryForm").addEventListener("submit", agregarCategoriaPersonalizada);
-  document.getElementById("savingGoalForm").addEventListener("submit", guardarMetaAhorro);
-  document.getElementById("casheaForm").addEventListener("submit", guardarCompraCashea);
-  document.getElementById("filterText").addEventListener("input", filtrarTransacciones);
-  document.getElementById("filterCategory").addEventListener("change", filtrarTransacciones);
-  document.getElementById("filterType").addEventListener("change", filtrarTransacciones);
-  document.getElementById("amount").addEventListener("input", actualizarVistaConversion);
-  document.getElementById("transactionCurrency").addEventListener("change", actualizarVistaConversion);
+  document.getElementById("transactionForm")?.addEventListener("submit", guardarTransaccion);
+  document.getElementById("budgetForm")?.addEventListener("submit", agregarPresupuesto);
+  document.getElementById("categoryForm")?.addEventListener("submit", agregarCategoriaPersonalizada);
+  document.getElementById("savingGoalForm")?.addEventListener("submit", guardarMetaAhorro);
+  document.getElementById("casheaForm")?.addEventListener("submit", guardarCompraCashea);
+  document.getElementById("filterText")?.addEventListener("input", filtrarTransacciones);
+  document.getElementById("filterCategory")?.addEventListener("change", filtrarTransacciones);
+  document.getElementById("filterType")?.addEventListener("change", filtrarTransacciones);
+  document.getElementById("amount")?.addEventListener("input", actualizarVistaConversion);
+  document.getElementById("transactionCurrency")?.addEventListener("change", actualizarVistaConversion);
 }
 
 function actualizarEncabezado() {
@@ -95,6 +95,14 @@ function actualizarEncabezado() {
   if (subtitulo) subtitulo.textContent = "Bienvenida a tu Gestor de Finanzas Personal";
 }
 
+function actualizarBotonTema() {
+  const button = document.querySelector(".header-buttons .btn.btn-secondary");
+  if (!button) return;
+
+  const isLight = document.body.classList.contains("light-mode");
+  button.textContent = isLight ? "🌙 Tema oscuro" : "☀️ Tema claro";
+}
+
 function renderTodo() {
   llenarSelectsCategorias();
   renderCategoriasPersonalizadas();
@@ -107,6 +115,7 @@ function renderTodo() {
   mostrarComprasCashea();
   actualizarGraficos();
   actualizarVistaConversion();
+  actualizarBotonTema();
 }
 
 function formatMoney(value, currency = displayCurrency) {
@@ -156,7 +165,11 @@ function actualizarVistaConversion() {
     .filter(code => code !== currency)
     .map(code => {
       const converted = convertFromVES(amountVES, code);
-      return `<div class="conversion-item"><strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong></div>`;
+      return `
+        <div class="conversion-item">
+          <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(converted, code)}</strong>
+        </div>
+      `;
     })
     .join("");
 
@@ -209,9 +222,9 @@ function llenarSelectsCategorias() {
 function agregarCategoriaPersonalizada(e) {
   e.preventDefault();
 
-  const name = document.getElementById("newCategoryName").value.trim();
-  const emoji = document.getElementById("newCategoryEmoji").value.trim();
-  const key = normalizarClaveCategoria(name);
+  const name = document.getElementById("newCategoryName")?.value.trim();
+  const emoji = document.getElementById("newCategoryEmoji")?.value.trim();
+  const key = normalizarClaveCategoria(name || "");
 
   if (!name || !emoji) {
     alert("Completa el nombre y el emoji.");
@@ -225,7 +238,7 @@ function agregarCategoriaPersonalizada(e) {
 
   categories[key] = { name, emoji, custom: true };
   guardarCategorias();
-  document.getElementById("categoryForm").reset();
+  document.getElementById("categoryForm")?.reset();
   renderTodo();
   alert("✅ Categoría agregada.");
 }
@@ -272,20 +285,25 @@ function renderCategoriasPersonalizadas() {
 }
 
 function normalizarClaveCategoria(texto) {
-  return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function guardarTransaccion(e) {
   e.preventDefault();
 
-  const id = document.getElementById("transactionId").value;
-  const description = document.getElementById("description").value.trim();
-  const amount = parseFloat(document.getElementById("amount").value);
-  const transactionCurrency = document.getElementById("transactionCurrency").value;
-  const category = document.getElementById("category").value;
-  const type = document.getElementById("type").value;
-  const date = document.getElementById("date").value;
-  const notes = document.getElementById("notes").value.trim();
+  const id = document.getElementById("transactionId")?.value;
+  const description = document.getElementById("description")?.value.trim();
+  const amount = parseFloat(document.getElementById("amount")?.value);
+  const transactionCurrency = document.getElementById("transactionCurrency")?.value;
+  const category = document.getElementById("category")?.value;
+  const type = document.getElementById("type")?.value;
+  const date = document.getElementById("date")?.value;
+  const notes = document.getElementById("notes")?.value.trim();
 
   if (!description || !category || !type || !date || !transactionCurrency || isNaN(amount) || amount <= 0) {
     alert("Completa todos los campos correctamente.");
@@ -294,7 +312,16 @@ function guardarTransaccion(e) {
 
   const amountVES = convertToVES(amount, transactionCurrency);
 
-  const payload = { description, amountOriginal: amount, currency: transactionCurrency, amountVES, category, type, date, notes };
+  const payload = {
+    description,
+    amountOriginal: amount,
+    currency: transactionCurrency,
+    amountVES,
+    category,
+    type,
+    date,
+    notes: notes || ""
+  };
 
   if (id) {
     const idNumber = Number(id);
@@ -334,9 +361,13 @@ function editarTransaccion(id) {
   document.getElementById("type").value = t.type;
   document.getElementById("date").value = t.date;
   document.getElementById("notes").value = t.notes || "";
+
   document.getElementById("transactionFormTitle").textContent = "✏️ Editando Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Guardar Cambios";
   document.getElementById("cancelEditBtn").classList.remove("hidden");
+
+  const formSection = document.querySelector("#transactionForm")?.closest(".form-section");
+  if (formSection) formSection.classList.add("editing");
 
   actualizarVistaConversion();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -347,12 +378,16 @@ function cancelarEdicion() {
 }
 
 function limpiarFormularioTransaccion() {
-  document.getElementById("transactionForm").reset();
+  document.getElementById("transactionForm")?.reset();
   document.getElementById("transactionId").value = "";
   document.getElementById("transactionFormTitle").textContent = "➕ Nueva Transacción";
   document.getElementById("submitTransactionBtn").textContent = "Agregar Transacción";
   document.getElementById("cancelEditBtn").classList.add("hidden");
   document.getElementById("transactionCurrency").value = "VES";
+
+  const formSection = document.querySelector("#transactionForm")?.closest(".form-section");
+  if (formSection) formSection.classList.remove("editing");
+
   configurarFecha();
   actualizarVistaConversion();
 }
@@ -368,6 +403,8 @@ function eliminarTransaccion(id) {
 
 function mostrarTransacciones(listaPersonalizada = null) {
   const lista = document.getElementById("transactionsList");
+  if (!lista) return;
+
   const base = listaPersonalizada || [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (base.length === 0) {
@@ -401,9 +438,9 @@ function mostrarTransacciones(listaPersonalizada = null) {
 }
 
 function filtrarTransacciones() {
-  const texto = document.getElementById("filterText").value.toLowerCase();
-  const categoria = document.getElementById("filterCategory").value;
-  const tipo = document.getElementById("filterType").value;
+  const texto = document.getElementById("filterText")?.value.toLowerCase() || "";
+  const categoria = document.getElementById("filterCategory")?.value || "";
+  const tipo = document.getElementById("filterType")?.value || "";
 
   const filtradas = transactions
     .filter(t => {
@@ -415,8 +452,11 @@ function filtrarTransacciones() {
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const list = document.getElementById("transactionsList");
+  if (!list) return;
+
   if (filtradas.length === 0) {
-    document.getElementById("transactionsList").innerHTML = '<p class="empty-message">No hay transacciones que coincidan con los filtros</p>';
+    list.innerHTML = '<p class="empty-message">No hay transacciones que coincidan con los filtros</p>';
     return;
   }
 
@@ -424,18 +464,18 @@ function filtrarTransacciones() {
 }
 
 function reiniciarFiltros() {
-  document.getElementById("filterText").value = "";
-  document.getElementById("filterCategory").value = "";
-  document.getElementById("filterType").value = "";
+  if (document.getElementById("filterText")) document.getElementById("filterText").value = "";
+  if (document.getElementById("filterCategory")) document.getElementById("filterCategory").value = "";
+  if (document.getElementById("filterType")) document.getElementById("filterType").value = "";
   mostrarTransacciones();
 }
 
 function agregarPresupuesto(e) {
   e.preventDefault();
 
-  const category = document.getElementById("budgetCategory").value;
-  const amount = parseFloat(document.getElementById("budgetAmount").value);
-  const currency = document.getElementById("budgetCurrency").value;
+  const category = document.getElementById("budgetCategory")?.value;
+  const amount = parseFloat(document.getElementById("budgetAmount")?.value);
+  const currency = document.getElementById("budgetCurrency")?.value;
 
   if (!category || !currency || isNaN(amount) || amount <= 0) {
     alert("Ingresa un presupuesto válido.");
@@ -449,8 +489,8 @@ function agregarPresupuesto(e) {
   };
 
   guardarDatos();
-  document.getElementById("budgetForm").reset();
-  document.getElementById("budgetCurrency").value = "VES";
+  document.getElementById("budgetForm")?.reset();
+  if (document.getElementById("budgetCurrency")) document.getElementById("budgetCurrency").value = "VES";
   renderTodo();
   alert("✅ Presupuesto guardado.");
 }
@@ -485,6 +525,8 @@ function obtenerEstadoPresupuesto(category) {
 
 function mostrarPresupuestos() {
   const lista = document.getElementById("budgetsList");
+  if (!lista) return;
+
   const keys = Object.keys(budgets);
 
   if (keys.length === 0) {
@@ -520,6 +562,8 @@ function mostrarPresupuestos() {
 
 function mostrarAlertasPresupuesto() {
   const contenedor = document.getElementById("budgetAlerts");
+  if (!contenedor) return;
+
   const keys = Object.keys(budgets);
 
   if (keys.length === 0) {
@@ -549,10 +593,18 @@ function actualizarResumen() {
 
   const budgetUsed = totalBudgetVES > 0 ? (totalExpenseVES / totalBudgetVES) * 100 : 0;
 
-  document.getElementById("totalIncome").textContent = formatMoney(convertFromVES(totalIncomeVES, displayCurrency), displayCurrency);
-  document.getElementById("totalExpense").textContent = formatMoney(convertFromVES(totalExpenseVES, displayCurrency), displayCurrency);
-  document.getElementById("balance").textContent = formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency);
-  document.getElementById("budgetUsed").textContent = `${budgetUsed.toFixed(0)}%`;
+  if (document.getElementById("totalIncome")) {
+    document.getElementById("totalIncome").textContent = formatMoney(convertFromVES(totalIncomeVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("totalExpense")) {
+    document.getElementById("totalExpense").textContent = formatMoney(convertFromVES(totalExpenseVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("balance")) {
+    document.getElementById("balance").textContent = formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("budgetUsed")) {
+    document.getElementById("budgetUsed").textContent = `${budgetUsed.toFixed(0)}%`;
+  }
 }
 
 function actualizarResumenAhorro() {
@@ -562,18 +614,28 @@ function actualizarResumenAhorro() {
   const faltanteVES = Math.max(savingGoal - ahorroActualVES, 0);
   const progress = savingGoal > 0 ? Math.min((ahorroActualVES / savingGoal) * 100, 100) : 0;
 
-  document.getElementById("savingGoalAmount").textContent = formatMoney(convertFromVES(savingGoal, displayCurrency), displayCurrency);
-  document.getElementById("currentSavings").textContent = formatMoney(convertFromVES(ahorroActualVES, displayCurrency), displayCurrency);
-  document.getElementById("remainingSavings").textContent = formatMoney(convertFromVES(faltanteVES, displayCurrency), displayCurrency);
-  document.getElementById("savingsProgressText").textContent = `${progress.toFixed(0)}%`;
-  document.getElementById("savingGoalBar").style.width = `${progress}%`;
+  if (document.getElementById("savingGoalAmount")) {
+    document.getElementById("savingGoalAmount").textContent = formatMoney(convertFromVES(savingGoal, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("currentSavings")) {
+    document.getElementById("currentSavings").textContent = formatMoney(convertFromVES(ahorroActualVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("remainingSavings")) {
+    document.getElementById("remainingSavings").textContent = formatMoney(convertFromVES(faltanteVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("savingsProgressText")) {
+    document.getElementById("savingsProgressText").textContent = `${progress.toFixed(0)}%`;
+  }
+  if (document.getElementById("savingGoalBar")) {
+    document.getElementById("savingGoalBar").style.width = `${progress}%`;
+  }
 }
 
 function guardarMetaAhorro(e) {
   e.preventDefault();
 
-  const value = parseFloat(document.getElementById("savingGoalInput").value);
-  const currency = document.getElementById("savingGoalCurrency").value;
+  const value = parseFloat(document.getElementById("savingGoalInput")?.value);
+  const currency = document.getElementById("savingGoalCurrency")?.value;
 
   if (isNaN(value) || value < 0 || !currency) {
     alert("Ingresa una meta válida.");
@@ -617,15 +679,15 @@ function cargarMetaAhorro() {
 function guardarCompraCashea(e) {
   e.preventDefault();
 
-  const description = document.getElementById("casheaDescription").value.trim();
-  const category = document.getElementById("casheaCategory").value;
-  const date = document.getElementById("casheaDate").value;
-  const currency = document.getElementById("casheaCurrency").value;
-  const totalOriginal = parseFloat(document.getElementById("casheaTotalAmountInput").value);
-  const initialOriginal = parseFloat(document.getElementById("casheaInitialAmountInput").value);
-  const installmentsCount = parseInt(document.getElementById("casheaInstallmentsCount").value, 10);
-  const installmentOriginal = parseFloat(document.getElementById("casheaInstallmentAmount").value);
-  const notes = document.getElementById("casheaNotes").value.trim();
+  const description = document.getElementById("casheaDescription")?.value.trim();
+  const category = document.getElementById("casheaCategory")?.value;
+  const date = document.getElementById("casheaDate")?.value;
+  const currency = document.getElementById("casheaCurrency")?.value;
+  const totalOriginal = parseFloat(document.getElementById("casheaTotalAmountInput")?.value);
+  const initialOriginal = parseFloat(document.getElementById("casheaInitialAmountInput")?.value);
+  const installmentsCount = parseInt(document.getElementById("casheaInstallmentsCount")?.value, 10);
+  const installmentOriginal = parseFloat(document.getElementById("casheaInstallmentAmount")?.value);
+  const notes = document.getElementById("casheaNotes")?.value.trim();
 
   if (!description || !category || !date || !currency || isNaN(totalOriginal) || isNaN(initialOriginal) || isNaN(installmentsCount) || isNaN(installmentOriginal)) {
     alert("Completa todos los campos de Cashea.");
@@ -645,7 +707,6 @@ function guardarCompraCashea(e) {
   const totalVES = convertToVES(totalOriginal, currency);
   const initialVES = convertToVES(initialOriginal, currency);
   const installmentVES = convertToVES(installmentOriginal, currency);
-  const financedVES = totalVES - initialVES;
 
   const installments = Array.from({ length: installmentsCount }, (_, index) => ({
     number: index + 1,
@@ -664,17 +725,17 @@ function guardarCompraCashea(e) {
     totalVES,
     initialOriginal,
     initialVES,
-    financedVES,
+    financedVES: totalVES - initialVES,
     installmentOriginal,
     installmentVES,
     installmentsCount,
     installments,
-    notes
+    notes: notes || ""
   });
 
   guardarDatos();
-  document.getElementById("casheaForm").reset();
-  document.getElementById("casheaCurrency").value = "VES";
+  document.getElementById("casheaForm")?.reset();
+  if (document.getElementById("casheaCurrency")) document.getElementById("casheaCurrency").value = "VES";
   configurarFecha();
   renderTodo();
   alert("✅ Compra Cashea guardada.");
@@ -795,15 +856,18 @@ function actualizarResumenCashea() {
     return sum + resumen.pendingInstallments;
   }, 0);
 
-  const totalEl = document.getElementById("casheaTotalAmount");
-  const paidEl = document.getElementById("casheaPaidAmount");
-  const pendingEl = document.getElementById("casheaPendingAmount");
-  const installmentsEl = document.getElementById("casheaPendingInstallments");
-
-  if (totalEl) totalEl.textContent = formatMoney(convertFromVES(totalVES, displayCurrency), displayCurrency);
-  if (paidEl) paidEl.textContent = formatMoney(convertFromVES(paidVES, displayCurrency), displayCurrency);
-  if (pendingEl) pendingEl.textContent = formatMoney(convertFromVES(pendingVES, displayCurrency), displayCurrency);
-  if (installmentsEl) installmentsEl.textContent = pendingInstallments;
+  if (document.getElementById("casheaTotalAmount")) {
+    document.getElementById("casheaTotalAmount").textContent = formatMoney(convertFromVES(totalVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("casheaPaidAmount")) {
+    document.getElementById("casheaPaidAmount").textContent = formatMoney(convertFromVES(paidVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("casheaPendingAmount")) {
+    document.getElementById("casheaPendingAmount").textContent = formatMoney(convertFromVES(pendingVES, displayCurrency), displayCurrency);
+  }
+  if (document.getElementById("casheaPendingInstallments")) {
+    document.getElementById("casheaPendingInstallments").textContent = pendingInstallments;
+  }
 }
 
 function actualizarGraficos() {
@@ -814,9 +878,11 @@ function actualizarGraficos() {
 function actualizarGraficoGastos() {
   const gastosPorCategoria = {};
 
-  transactions.filter(t => t.type === "gasto").forEach(t => {
-    gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
-  });
+  transactions
+    .filter(t => t.type === "gasto")
+    .forEach(t => {
+      gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
+    });
 
   const labels = Object.keys(gastosPorCategoria).map(cat => `${getCategoryEmoji(cat)} ${getCategoryName(cat)}`);
   const data = Object.values(gastosPorCategoria).map(valor => convertFromVES(valor, displayCurrency));
@@ -865,12 +931,14 @@ function llenarMesesReporte() {
   if (!select) return;
 
   const mesesUnicos = [...new Set(transactions.map(t => t.date.slice(0, 7)))].sort().reverse();
-  select.innerHTML = '<option value="">Selecciona un mes</option>' + mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
+  select.innerHTML = '<option value="">Selecciona un mes</option>' +
+    mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
 }
 
 function generarReporte() {
-  const month = document.getElementById("reportMonth").value;
+  const month = document.getElementById("reportMonth")?.value;
   const contenedor = document.getElementById("reportContent");
+  if (!contenedor) return;
 
   if (!month) {
     contenedor.innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
@@ -925,11 +993,14 @@ function generarReporte() {
 function cambiarTab(tab) {
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-  document.getElementById(`tab-${tab}`).classList.add("active");
+
+  document.getElementById(`tab-${tab}`)?.classList.add("active");
 
   const botones = document.querySelectorAll(".tab-btn");
   const mapa = { transacciones: 0, cashea: 1, graficos: 2, reportes: 3, configuracion: 4 };
-  botones[mapa[tab]].classList.add("active");
+  if (typeof mapa[tab] !== "undefined" && botones[mapa[tab]]) {
+    botones[mapa[tab]].classList.add("active");
+  }
 
   if (tab === "graficos") setTimeout(actualizarGraficos, 100);
 }
@@ -937,16 +1008,22 @@ function cambiarTab(tab) {
 function toggleDarkMode() {
   document.body.classList.toggle("light-mode");
   localStorage.setItem("themeMode", document.body.classList.contains("light-mode") ? "light" : "dark");
+  actualizarBotonTema();
 }
 
 function inicializarTema() {
   const savedTheme = localStorage.getItem("themeMode") || "dark";
   document.body.classList.remove("light-mode");
-  if (savedTheme === "light") document.body.classList.add("light-mode");
+
+  if (savedTheme === "light") {
+    document.body.classList.add("light-mode");
+  }
+
+  actualizarBotonTema();
 }
 
 function guardarConfiguracionMoneda() {
-  displayCurrency = document.getElementById("displayCurrency").value;
+  displayCurrency = document.getElementById("displayCurrency")?.value || "VES";
   localStorage.setItem("displayCurrency", displayCurrency);
   renderTodo();
   generarReporteSiExiste();
@@ -959,9 +1036,9 @@ function cargarConfiguracionMoneda() {
 }
 
 function guardarTasas() {
-  const usd = parseFloat(document.getElementById("rateUSD").value);
-  const eur = parseFloat(document.getElementById("rateEUR").value);
-  const usdt = parseFloat(document.getElementById("rateUSDT").value);
+  const usd = parseFloat(document.getElementById("rateUSD")?.value);
+  const eur = parseFloat(document.getElementById("rateEUR")?.value);
+  const usdt = parseFloat(document.getElementById("rateUSDT")?.value);
 
   if ([usd, eur, usdt].some(v => isNaN(v) || v <= 0)) {
     alert("Ingresa tasas válidas mayores a 0.");
@@ -982,6 +1059,7 @@ function guardarTasas() {
 function cargarTasas() {
   const saved = localStorage.getItem("exchangeRates");
   if (!saved) return;
+
   try {
     const parsed = JSON.parse(saved);
     exchangeRates = { ...exchangeRates, ...parsed, VES: 1 };
@@ -1007,6 +1085,7 @@ function guardarCategorias() {
 function cargarCategorias() {
   const saved = localStorage.getItem("categories");
   if (!saved) return;
+
   try {
     const parsed = JSON.parse(saved);
     categories = { ...categories, ...parsed };
@@ -1014,7 +1093,7 @@ function cargarCategorias() {
 }
 
 function generarReporteSiExiste() {
-  const month = document.getElementById("reportMonth").value;
+  const month = document.getElementById("reportMonth")?.value;
   if (month) generarReporte();
 }
 
@@ -1132,6 +1211,7 @@ function limpiarDatos() {
   budgets = {};
   casheaPurchases = [];
   savingGoal = 0;
+
   localStorage.removeItem("savingGoal");
   guardarDatos();
   limpiarFormularioTransaccion();
@@ -1141,14 +1221,18 @@ function limpiarDatos() {
   const savingInput = document.getElementById("savingGoalInput");
   const savingCurrency = document.getElementById("savingGoalCurrency");
   const budgetCurrency = document.getElementById("budgetCurrency");
+  const casheaForm = document.getElementById("casheaForm");
 
   if (savingInput) savingInput.value = "";
   if (savingCurrency) savingCurrency.value = "VES";
   if (budgetCurrency) budgetCurrency.value = "VES";
-
-  document.getElementById("reportContent").innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
-  const casheaForm = document.getElementById("casheaForm");
   if (casheaForm) casheaForm.reset();
+
+  const reportContent = document.getElementById("reportContent");
+  if (reportContent) {
+    reportContent.innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
+  }
+
   configurarFecha();
 }
 
