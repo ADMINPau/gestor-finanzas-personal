@@ -3,19 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
   <title>Gestor de Finanzas Personal</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body data-theme="noche">
   <div class="container">
     <header class="header">
       <div>
         <h1 id="mainGreeting">Hola, Paula</h1>
         <p class="subtitle" id="mainSubtitle">Organiza tus movimientos con calma</p>
       </div>
+
       <div class="header-buttons">
-        <button class="btn btn-secondary" onclick="toggleDarkMode()">Cambiar tema</button>
+        <select id="themeSelector" class="theme-select" onchange="cambiarTema()">
+          <option value="noche">Tema noche</option>
+          <option value="perla">Tema perla</option>
+          <option value="grafito">Tema grafito</option>
+        </select>
+
         <button class="btn btn-secondary" onclick="descargarDatos()">JSON</button>
         <button class="btn btn-secondary" onclick="document.getElementById('importJsonInput').click()">Importar JSON</button>
         <button class="btn btn-secondary" onclick="exportarCSV()">CSV</button>
@@ -81,17 +88,17 @@
               <input type="hidden" id="transactionId" />
 
               <div class="form-group">
-                <label for="description">Descripción:</label>
+                <label for="description">Descripción</label>
                 <input type="text" id="description" required />
               </div>
 
               <div class="form-group">
-                <label for="amount">Cantidad:</label>
+                <label for="amount">Cantidad</label>
                 <input type="number" id="amount" step="0.01" min="0" required />
               </div>
 
               <div class="form-group">
-                <label for="transactionCurrency">Moneda de la transacción:</label>
+                <label for="transactionCurrency">Moneda de la transacción</label>
                 <select id="transactionCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
                   <option value="USD">Dólar BCV</option>
@@ -109,12 +116,12 @@
               </div>
 
               <div class="form-group">
-                <label for="category">Categoría:</label>
+                <label for="category">Categoría</label>
                 <select id="category" required></select>
               </div>
 
               <div class="form-group">
-                <label for="type">Tipo:</label>
+                <label for="type">Tipo</label>
                 <select id="type" required>
                   <option value="gasto">Gasto</option>
                   <option value="ingreso">Ingreso</option>
@@ -122,12 +129,12 @@
               </div>
 
               <div class="form-group">
-                <label for="date">Fecha:</label>
+                <label for="date">Fecha</label>
                 <input type="date" id="date" required />
               </div>
 
               <div class="form-group">
-                <label for="notes">Notas:</label>
+                <label for="notes">Notas</label>
                 <textarea id="notes" rows="4"></textarea>
               </div>
 
@@ -140,11 +147,11 @@
             <h2 class="section-title icon-target">Meta de ahorro</h2>
             <form id="savingGoalForm">
               <div class="form-group">
-                <label for="savingGoalInput">Objetivo:</label>
+                <label for="savingGoalInput">Objetivo</label>
                 <input type="number" id="savingGoalInput" step="0.01" min="0" required />
               </div>
               <div class="form-group">
-                <label for="savingGoalCurrency">Moneda de la meta:</label>
+                <label for="savingGoalCurrency">Moneda de la meta</label>
                 <select id="savingGoalCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
                   <option value="USD">Dólar BCV</option>
@@ -185,11 +192,11 @@
             <h2 class="section-title icon-folder">Categorías personalizadas</h2>
             <form id="categoryForm">
               <div class="form-group">
-                <label for="newCategoryName">Nombre de la categoría:</label>
+                <label for="newCategoryName">Nombre de la categoría</label>
                 <input type="text" id="newCategoryName" placeholder="Ej: mascotas" required />
               </div>
               <div class="form-group">
-                <label for="newCategoryEmoji">Emoji:</label>
+                <label for="newCategoryEmoji">Emoji</label>
                 <input type="text" id="newCategoryEmoji" placeholder="🐶" maxlength="4" required />
               </div>
               <button type="submit" class="btn btn-primary">Agregar Categoría</button>
@@ -201,15 +208,15 @@
             <h2 class="section-title icon-briefcase">Establecer Presupuesto</h2>
             <form id="budgetForm">
               <div class="form-group">
-                <label for="budgetCategory">Categoría:</label>
+                <label for="budgetCategory">Categoría</label>
                 <select id="budgetCategory" required></select>
               </div>
               <div class="form-group">
-                <label for="budgetAmount">Monto:</label>
+                <label for="budgetAmount">Monto</label>
                 <input type="number" id="budgetAmount" step="0.01" min="0" required />
               </div>
               <div class="form-group">
-                <label for="budgetCurrency">Moneda del presupuesto:</label>
+                <label for="budgetCurrency">Moneda del presupuesto</label>
                 <select id="budgetCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
                   <option value="USD">Dólar BCV</option>
@@ -263,22 +270,22 @@
               <input type="hidden" id="casheaPurchaseId" />
 
               <div class="form-group">
-                <label for="casheaDescription">Producto o compra:</label>
+                <label for="casheaDescription">Producto o compra</label>
                 <input type="text" id="casheaDescription" required />
               </div>
 
               <div class="form-group">
-                <label for="casheaCategory">Categoría:</label>
+                <label for="casheaCategory">Categoría</label>
                 <select id="casheaCategory" required></select>
               </div>
 
               <div class="form-group">
-                <label for="casheaDate">Fecha de compra:</label>
+                <label for="casheaDate">Fecha de compra</label>
                 <input type="date" id="casheaDate" required />
               </div>
 
               <div class="form-group">
-                <label for="casheaCurrency">Moneda:</label>
+                <label for="casheaCurrency">Moneda</label>
                 <select id="casheaCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
                   <option value="USD">Dólar BCV</option>
@@ -288,32 +295,32 @@
               </div>
 
               <div class="form-group">
-                <label for="casheaTotalAmountInput">Monto total:</label>
+                <label for="casheaTotalAmountInput">Monto total</label>
                 <input type="number" id="casheaTotalAmountInput" step="0.01" min="0" required />
               </div>
 
               <div class="form-group">
-                <label for="casheaInitialAmountInput">Inicial:</label>
+                <label for="casheaInitialAmountInput">Inicial</label>
                 <input type="number" id="casheaInitialAmountInput" step="0.01" min="0" required />
               </div>
 
               <div class="form-group">
-                <label for="casheaInstallmentsCount">Cantidad de cuotas:</label>
+                <label for="casheaInstallmentsCount">Cantidad de cuotas</label>
                 <input type="number" id="casheaInstallmentsCount" min="1" required />
               </div>
 
               <div class="form-group">
-                <label for="casheaInstallmentAmount">Monto de cada cuota:</label>
+                <label for="casheaInstallmentAmount">Monto de cada cuota</label>
                 <input type="number" id="casheaInstallmentAmount" step="0.01" min="0" required />
               </div>
 
               <div class="form-group">
-                <label for="casheaFirstPaymentDate">Fecha de la primera cuota:</label>
+                <label for="casheaFirstPaymentDate">Fecha de la primera cuota</label>
                 <input type="date" id="casheaFirstPaymentDate" required />
               </div>
 
               <div class="form-group">
-                <label for="casheaNotes">Notas:</label>
+                <label for="casheaNotes">Notas</label>
                 <textarea id="casheaNotes" rows="4"></textarea>
               </div>
 
@@ -396,7 +403,7 @@
         <div class="rate-card">
           <h3 class="mini-title icon-display">Moneda de visualización</h3>
           <div class="form-group">
-            <label for="displayCurrency">Mostrar toda la app en:</label>
+            <label for="displayCurrency">Mostrar toda la app en</label>
             <select id="displayCurrency" class="filter-input" onchange="guardarConfiguracionMoneda()">
               <option value="VES">VES</option>
               <option value="USD">USD</option>
