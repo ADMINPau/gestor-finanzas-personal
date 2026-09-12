@@ -6,6 +6,8 @@ let balanceChart = null;
 let displayCurrency = "VES";
 let savingGoal = 0;
 
+const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwXY6ew5yAhEEOhwdf-GLwGk7_d0YlprXE4GW_KkeTOn_HZb70ZFcEAqp0cn5B2fzSLpklW0vc0EX/pub?output=csv";
+
 let exchangeRates = {
   VES: 1,
   USD: 36.5,
@@ -34,16 +36,16 @@ const currencyLabels = {
   VES: "Bolívar (VES)",
   USD: "USD BCV (referencia)",
   EUR: "EUR BCV (referencia)",
-  USDT: "USDT (referencia)"
+  USDT: "USDT (manual)"
 };
 
 function getCurrencySourceLabel(currency) {
   if (currency === "VES") return "Moneda base";
   if (currency === "USD" || currency === "EUR") {
-    return rateMeta.mode === "automatico" ? "Referencia externa BCV" : "Referencia manual";
+    return rateMeta.mode === "automatico" ? "Google Sheets" : "Referencia manual";
   }
   if (currency === "USDT") {
-    return rateMeta.mode === "automatico" ? "Referencia externa USDT" : "Referencia manual";
+    return "Referencia manual";
   }
   return "Referencia";
 }
@@ -227,14 +229,14 @@ function actualizarPanelTasas() {
   if (sourceTextEl) sourceTextEl.textContent = rateMeta.source || "Local";
 
   if (badgeEl) {
-    badgeEl.textContent = rateMeta.mode === "automatico" ? "Fuente externa" : "Manual";
+    badgeEl.textContent = rateMeta.mode === "automatico" ? "Google Sheets" : "Manual";
     badgeEl.className = `source-badge ${rateMeta.mode === "automatico" ? "external" : "manual"}`;
   }
 }
 
 async function actualizarTasasAutomaticamente() {
   const boton = document.getElementById("autoRatesButton");
-  const textoOriginal = boton?.textContent || "Actualizar tasas automáticamente";
+  const textoOriginal = boton?.textContent || "Actualizar USD/EUR desde Google Sheets";
 
   try {
     if (boton) {
@@ -242,21 +244,21 @@ async function actualizarTasasAutomaticamente() {
       boton.textContent = "Actualizando...";
     }
 
-    const tasas = await obtenerTasasExternasSeguras();
+    const tasas = await obtenerTasasDesdeGoogleSheets();
 
-    if (!tasas || (!tasas.USD && !tasas.EUR && !tasas.USDT)) {
-      alert("No se pudieron actualizar las tasas desde alcambio.app. Puedes seguir usando las tasas manuales.");
+    if (!tasas || (!tasas.USD && !tasas.EUR)) {
+      alert("No se pudieron actualizar USD y EUR desde Google Sheets.");
       return;
     }
 
     if (tasas.USD && tasas.USD > 0) exchangeRates.USD = tasas.USD;
     if (tasas.EUR && tasas.EUR > 0) exchangeRates.EUR = tasas.EUR;
-    if (tasas.USDT && tasas.USDT > 0) exchangeRates.USDT = tasas.USDT;
+    // USDT queda manual y no se toca
 
     rateMeta = {
       lastUpdated: new Date().toISOString(),
       mode: "automatico",
-      source: "https://alcambio.app/tasas"
+      source: "Google Sheets"
     };
 
     guardarTasasEnStorage();
@@ -264,10 +266,10 @@ async function actualizarTasasAutomaticamente() {
     renderTodo();
     generarReporteSiExiste();
 
-    alert("✅ Tasas actualizadas desde alcambio.app");
+    alert("✅ USD y EUR actualizados desde Google Sheets. USDT quedó manual.");
   } catch (error) {
     console.error("Error actualizando tasas:", error);
-    alert("No se pudieron actualizar las tasas desde alcambio.app. Puedes seguir usando las tasas manuales.");
+    alert("No se pudieron actualizar USD y EUR desde Google Sheets.");
   } finally {
     if (boton) {
       boton.disabled = false;
@@ -276,65 +278,39 @@ async function actualizarTasasAutomaticamente() {
   }
 }
 
-async function obtenerTasasExternasSeguras() {
-  return await intentarFuenteHTMLSegura();
+async function obtenerTasasDesdeGoogleSheets() {
+  const response = await fetch(GOOGLE_SHEETS_CSV_URL);
+  if (!response.ok) {
+    throw new Error("No se pudo leer el CSV publicado.");
+  }
+
+  const csv = await response.text();
+  return parseGoogleSheetCSV(csv);
 }
 
-async function intentarFuenteHTMLSegura() {
-  const urlObjetivo = "https://alcambio.app/tasas";
+function parseGoogleSheetCSV(csvText) {
+  const lines = csvText
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
 
-  const urlsPrueba = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(urlObjetivo)}`,
-    `https://r.jina.ai/http://${urlObjetivo.replace("https://", "")}`
-  ];
+  const tasas = { USD: null, EUR: null };
 
-  for (const url of urlsPrueba) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) continue;
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].split(",");
+    if (row.length < 2) continue;
 
-      const html = await response.text();
-      const tasas = extraerTasasDesdeTexto(html);
+    const moneda = String(row[0]).replace(/"/g, "").trim().toUpperCase();
+    const valorTexto = String(row[1]).replace(/"/g, "").trim();
+    const valor = parseFloat(valorTexto);
 
-      if (tasas && (tasas.USD || tasas.EUR || tasas.USDT)) {
-        return tasas;
-      }
-    } catch (error) {
-      console.warn("Falló lectura externa:", url, error);
+    if (!Number.isNaN(valor) && valor > 0) {
+      if (moneda === "USD") tasas.USD = valor;
+      if (moneda === "EUR") tasas.EUR = valor;
     }
   }
 
-  return null;
-}
-
-function extraerTasasDesdeTexto(texto) {
-  const limpio = texto.replace(/\s+/g, " ").replace(/,/g, ".").trim();
-
-  return {
-    USD: extraerPrimerNumeroValido(limpio, [
-      /(?:USD|Dólar|Dolar)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i,
-      /(?:BCV)\D{0,40}(?:USD|Dólar|Dolar)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i
-    ]),
-    EUR: extraerPrimerNumeroValido(limpio, [
-      /(?:EUR|Euro)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i
-    ]),
-    USDT: extraerPrimerNumeroValido(limpio, [
-      /(?:USDT)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i
-    ])
-  };
-}
-
-function extraerPrimerNumeroValido(texto, patrones) {
-  for (const patron of patrones) {
-    const match = texto.match(patron);
-    if (!match) continue;
-
-    const valor = parseFloat(match[1]);
-    if (!isNaN(valor) && valor > 0 && valor < 1000) {
-      return valor;
-    }
-  }
-  return null;
+  return tasas;
 }
 
 function getCategoryName(key) {
