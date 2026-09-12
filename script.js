@@ -39,15 +39,6 @@ const currencyLabels = {
   USDT: "USDT (manual)"
 };
 
-function getCurrencySourceLabel(currency) {
-  if (currency === "VES") return "Moneda base";
-  if (currency === "USD" || currency === "EUR") {
-    return rateMeta.mode === "automatico" ? "BCV oficial" : "Referencia manual";
-  }
-  if (currency === "USDT") return "Referencia manual";
-  return "Referencia";
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   cargarTodo();
   inicializarTema();
@@ -60,6 +51,57 @@ document.addEventListener("DOMContentLoaded", () => {
   renderTodo();
   actualizarVistaConversion();
 });
+
+function mostrarToast(mensaje, tipo = "info") {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${tipo}`;
+  toast.textContent = mensaje;
+
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add("show"));
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 2800);
+}
+
+function getCurrencySourceLabel(currency) {
+  if (currency === "VES") return "Moneda base";
+  if (currency === "USD" || currency === "EUR") {
+    return rateMeta.mode === "automatico" ? "BCV oficial" : "Referencia manual";
+  }
+  if (currency === "USDT") return "Referencia manual";
+  return "Referencia";
+}
+
+function getRandomSubtitleByHour(hour) {
+  const morning = [
+    "Empecemos el día con claridad",
+    "Hoy puedes organizar todo con calma",
+    "Un buen día empieza con cuentas claras"
+  ];
+  const afternoon = [
+    "Revisa tus movimientos de hoy",
+    "Organiza tus gastos y avanza con orden",
+    "Todo va mejor cuando ves tus números a tiempo"
+  ];
+  const night = [
+    "Cierra el día con tus cuentas al día",
+    "Un repaso rápido también cuenta",
+    "Deja tus movimientos en orden antes de descansar"
+  ];
+
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  if (hour >= 5 && hour < 12) return pick(morning);
+  if (hour >= 12 && hour < 19) return pick(afternoon);
+  return pick(night);
+}
 
 function cargarTodo() {
   cargarDatos();
@@ -97,10 +139,13 @@ function inicializarEventos() {
   document.getElementById("categoryForm")?.addEventListener("submit", agregarCategoriaPersonalizada);
   document.getElementById("savingGoalForm")?.addEventListener("submit", guardarMetaAhorro);
   document.getElementById("casheaForm")?.addEventListener("submit", guardarCompraCashea);
+  document.getElementById("importJsonInput")?.addEventListener("change", importarDatosJSON);
 
   document.getElementById("filterText")?.addEventListener("input", filtrarTransacciones);
   document.getElementById("filterCategory")?.addEventListener("change", filtrarTransacciones);
   document.getElementById("filterType")?.addEventListener("change", filtrarTransacciones);
+  document.getElementById("filterDateFrom")?.addEventListener("change", filtrarTransacciones);
+  document.getElementById("filterDateTo")?.addEventListener("change", filtrarTransacciones);
 
   document.getElementById("amount")?.addEventListener("input", actualizarVistaConversion);
   document.getElementById("transactionCurrency")?.addEventListener("change", actualizarVistaConversion);
@@ -110,16 +155,11 @@ function actualizarEncabezado() {
   const ahoraCaracas = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Caracas" }));
   const hora = ahoraCaracas.getHours();
 
-  let saludo = "Hola";
-  if (hora >= 5 && hora < 12) saludo = "Buenos días";
-  else if (hora >= 12 && hora < 19) saludo = "Buenas tardes";
-  else saludo = "Buenas noches";
-
   const titulo = document.getElementById("mainGreeting");
   const subtitulo = document.getElementById("mainSubtitle");
 
-  if (titulo) titulo.textContent = `${saludo}, Paula`;
-  if (subtitulo) subtitulo.textContent = "Bienvenida a tu Gestor de Finanzas Personal";
+  if (titulo) titulo.textContent = "Hola, Paula";
+  if (subtitulo) subtitulo.textContent = getRandomSubtitleByHour(hora);
 }
 
 function actualizarBotonTema() {
@@ -137,6 +177,7 @@ function renderTodo() {
   actualizarResumen();
   actualizarResumenAhorro();
   actualizarResumenCashea();
+  actualizarResumenMesActual();
   mostrarAlertasCashea();
   mostrarComprasCashea();
   actualizarGraficos();
@@ -238,7 +279,7 @@ async function actualizarTasasAutomaticamente() {
     const tasas = await obtenerTasasDesdeBCV();
 
     if (!tasas || (!tasas.USD && !tasas.EUR)) {
-      alert("No se pudieron actualizar USD y EUR desde la fuente BCV.");
+      mostrarToast("No se pudieron actualizar USD y EUR desde BCV.", "error");
       return;
     }
 
@@ -258,10 +299,10 @@ async function actualizarTasasAutomaticamente() {
     renderTodo();
     generarReporteSiExiste();
 
-    alert("✅ USD y EUR actualizados con tasa oficial BCV. USDT quedó manual.");
+    mostrarToast("USD y EUR actualizados con la tasa oficial BCV.", "success");
   } catch (error) {
     console.error("Error actualizando tasas BCV:", error);
-    alert("No se pudieron actualizar USD y EUR desde la fuente BCV.");
+    mostrarToast("No se pudieron actualizar USD y EUR desde BCV.", "error");
   } finally {
     if (boton) {
       boton.disabled = false;
@@ -271,7 +312,7 @@ async function actualizarTasasAutomaticamente() {
 }
 
 async function obtenerTasasDesdeBCV() {
-  const response = await fetch(BCV_API_URL);
+  const response = await fetch(BCV_API_URL, { cache: "no-cache" });
   if (!response.ok) throw new Error("No se pudo consultar la API BCV.");
 
   const data = await response.json();
@@ -279,7 +320,7 @@ async function obtenerTasasDesdeBCV() {
   const usd = parseRateValue(data.USD);
   const eur = parseRateValue(data.EUR);
   const effectiveDate = data.date || data.effective_date || null;
-  const capturedAt = data.timestamp || data.captured_at || new Date().toISOString();
+  const capturedAt = data.updated_at || data.timestamp || data.captured_at || new Date().toISOString();
 
   return {
     USD: usd,
@@ -301,6 +342,72 @@ function parseRateValue(value) {
     if (typeof value.rate === "string") return parseFloat(value.rate.replace(",", "."));
   }
   return NaN;
+}
+
+async function importarDatosJSON(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const texto = await file.text();
+    const parsed = JSON.parse(texto);
+
+    transactions = (parsed.transactions || []).map(t => ({
+      ...t,
+      id: Number(t.id || Date.now()),
+      amountOriginal: Number(t.amountOriginal ?? t.amount ?? t.amountVES ?? 0),
+      currency: t.currency || "VES",
+      amountVES: Number(t.amountVES ?? convertToVES(Number(t.amountOriginal ?? t.amount ?? 0), t.currency || "VES")),
+      notes: t.notes || "",
+      origin: t.origin || null,
+      casheaPurchaseId: t.casheaPurchaseId ?? null,
+      cuotaNumero: t.cuotaNumero ?? null,
+      esInicial: Boolean(t.esInicial)
+    }));
+
+    budgets = parsed.budgets || {};
+    casheaPurchases = (parsed.casheaPurchases || []).map(item => ({
+      ...item,
+      id: Number(item.id || Date.now()),
+      installments: (item.installments || []).map(inst => ({
+        ...inst,
+        number: Number(inst.number),
+        paid: Boolean(inst.paid),
+        dueDate: inst.dueDate,
+        paidDate: inst.paidDate || null
+      }))
+    }));
+
+    if (parsed.displayCurrency) displayCurrency = parsed.displayCurrency;
+    if (parsed.exchangeRates) exchangeRates = { ...exchangeRates, ...parsed.exchangeRates, VES: 1 };
+    if (parsed.exchangeRateMeta) rateMeta = { ...rateMeta, ...parsed.exchangeRateMeta };
+    if (parsed.categories) categories = { ...categories, ...parsed.categories };
+
+    if (typeof parsed.savingGoal === "number") {
+      savingGoal = parsed.savingGoal;
+      localStorage.setItem("savingGoal", JSON.stringify({
+        amountVES: savingGoal,
+        amountOriginal: savingGoal,
+        currency: "VES"
+      }));
+    }
+
+    guardarDatos();
+    guardarTasasEnStorage();
+    localStorage.setItem("displayCurrency", displayCurrency);
+    localStorage.setItem("categories", JSON.stringify(categories));
+
+    llenarMesesReporte();
+    pintarFormularioTasas();
+    renderTodo();
+
+    mostrarToast("Datos importados correctamente.", "success");
+  } catch (error) {
+    console.error(error);
+    mostrarToast("No se pudo importar el archivo JSON.", "error");
+  } finally {
+    event.target.value = "";
+  }
 }
 
 function getCategoryName(key) {
@@ -343,11 +450,11 @@ function agregarCategoriaPersonalizada(e) {
   const key = normalizarClaveCategoria(name || "");
 
   if (!name || !emoji) {
-    alert("Completa el nombre y el emoji.");
+    mostrarToast("Completa el nombre y el emoji.", "error");
     return;
   }
   if (categories[key]) {
-    alert("Ya existe una categoría con ese nombre.");
+    mostrarToast("Ya existe una categoría con ese nombre.", "warning");
     return;
   }
 
@@ -355,6 +462,7 @@ function agregarCategoriaPersonalizada(e) {
   guardarCategorias();
   document.getElementById("categoryForm")?.reset();
   renderTodo();
+  mostrarToast("Categoría agregada.", "success");
 }
 
 function eliminarCategoriaPersonalizada(key) {
@@ -365,7 +473,7 @@ function eliminarCategoriaPersonalizada(key) {
     || casheaPurchases.some(item => item.category === key);
 
   if (usada) {
-    alert("No puedes eliminar esta categoría porque ya está en uso.");
+    mostrarToast("No puedes eliminar esta categoría porque ya está en uso.", "warning");
     return;
   }
   if (!confirm("¿Deseas eliminar esta categoría personalizada?")) return;
@@ -373,6 +481,7 @@ function eliminarCategoriaPersonalizada(key) {
   delete categories[key];
   guardarCategorias();
   renderTodo();
+  mostrarToast("Categoría eliminada.", "success");
 }
 
 function renderCategoriasPersonalizadas() {
@@ -436,13 +545,8 @@ function crearTransaccionDesdeCashea({ description, category, date, amountOrigin
   });
 }
 
-function eliminarTransaccionCashea(casheaPurchaseId, cuotaNumero = null, esInicial = false) {
-  transactions = transactions.filter(t => !(
-    t.origin === "cashea" &&
-    t.casheaPurchaseId === casheaPurchaseId &&
-    t.cuotaNumero === cuotaNumero &&
-    Boolean(t.esInicial) === Boolean(esInicial)
-  ));
+function eliminarTransaccionesDeCompraCashea(casheaPurchaseId) {
+  transactions = transactions.filter(t => !(t.origin === "cashea" && t.casheaPurchaseId === casheaPurchaseId));
 }
 
 function guardarTransaccion(e) {
@@ -458,7 +562,7 @@ function guardarTransaccion(e) {
   const notes = document.getElementById("notes")?.value.trim();
 
   if (!description || !category || !type || !date || !currency || isNaN(amount) || amount <= 0) {
-    alert("Completa todos los campos correctamente.");
+    mostrarToast("Completa todos los campos correctamente.", "error");
     return;
   }
 
@@ -476,16 +580,18 @@ function guardarTransaccion(e) {
   if (id) {
     const index = transactions.findIndex(t => t.id === Number(id));
     if (index === -1) {
-      alert("No se encontró la transacción a editar.");
+      mostrarToast("No se encontró la transacción a editar.", "error");
       return;
     }
     if (transactions[index].origin === "cashea") {
-      alert("Las transacciones automáticas de Cashea no se editan desde aquí.");
+      mostrarToast("Las transacciones automáticas de Cashea no se editan desde aquí.", "warning");
       return;
     }
     transactions[index] = { ...transactions[index], ...payload };
+    mostrarToast("Transacción actualizada.", "success");
   } else {
     transactions.push({ id: Date.now(), ...payload });
+    mostrarToast("Transacción agregada.", "success");
   }
 
   guardarDatos();
@@ -499,7 +605,7 @@ function editarTransaccion(id) {
   const t = transactions.find(item => item.id === id);
   if (!t) return;
   if (t.origin === "cashea") {
-    alert("Esta transacción fue generada automáticamente por Cashea. Debes gestionarla desde la pestaña Cashea.");
+    mostrarToast("Esta transacción se gestiona desde la pestaña Cashea.", "warning");
     return;
   }
 
@@ -525,6 +631,7 @@ function editarTransaccion(id) {
 
 function cancelarEdicion() {
   limpiarFormularioTransaccion();
+  mostrarToast("Edición cancelada.", "info");
 }
 
 function limpiarFormularioTransaccion() {
@@ -548,7 +655,7 @@ function eliminarTransaccion(id) {
   const transaccion = transactions.find(t => t.id === id);
   if (!transaccion) return;
   if (transaccion.origin === "cashea") {
-    alert("Esta transacción fue generada automáticamente por Cashea. Debes cambiarla desde la compra Cashea asociada.");
+    mostrarToast("Esta transacción fue generada por Cashea.", "warning");
     return;
   }
   if (!confirm("¿Deseas eliminar esta transacción?")) return;
@@ -558,6 +665,7 @@ function eliminarTransaccion(id) {
   llenarMesesReporte();
   renderTodo();
   filtrarTransacciones();
+  mostrarToast("Transacción eliminada.", "success");
 }
 
 function mostrarTransacciones(listaPersonalizada = null) {
@@ -600,13 +708,19 @@ function filtrarTransacciones() {
   const texto = document.getElementById("filterText")?.value.toLowerCase() || "";
   const categoria = document.getElementById("filterCategory")?.value || "";
   const tipo = document.getElementById("filterType")?.value || "";
+  const dateFrom = document.getElementById("filterDateFrom")?.value || "";
+  const dateTo = document.getElementById("filterDateTo")?.value || "";
 
   const filtradas = transactions
     .filter(t => {
       const textoBase = `${t.description} ${t.notes || ""} ${getCategoryName(t.category)} ${t.currency || ""}`.toLowerCase();
-      return textoBase.includes(texto)
-        && (!categoria || t.category === categoria)
-        && (!tipo || t.type === tipo);
+      const cumpleTexto = textoBase.includes(texto);
+      const cumpleCategoria = !categoria || t.category === categoria;
+      const cumpleTipo = !tipo || t.type === tipo;
+      const cumpleDesde = !dateFrom || t.date >= dateFrom;
+      const cumpleHasta = !dateTo || t.date <= dateTo;
+
+      return cumpleTexto && cumpleCategoria && cumpleTipo && cumpleDesde && cumpleHasta;
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -622,15 +736,14 @@ function filtrarTransacciones() {
 }
 
 function reiniciarFiltros() {
-  const filterText = document.getElementById("filterText");
-  const filterCategory = document.getElementById("filterCategory");
-  const filterType = document.getElementById("filterType");
-
-  if (filterText) filterText.value = "";
-  if (filterCategory) filterCategory.value = "";
-  if (filterType) filterType.value = "";
+  const ids = ["filterText", "filterCategory", "filterType", "filterDateFrom", "filterDateTo"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
 
   mostrarTransacciones();
+  mostrarToast("Filtros reiniciados.", "info");
 }
 
 function agregarPresupuesto(e) {
@@ -641,7 +754,7 @@ function agregarPresupuesto(e) {
   const currency = document.getElementById("budgetCurrency")?.value;
 
   if (!category || !currency || isNaN(amount) || amount <= 0) {
-    alert("Ingresa un presupuesto válido.");
+    mostrarToast("Ingresa un presupuesto válido.", "error");
     return;
   }
 
@@ -658,6 +771,7 @@ function agregarPresupuesto(e) {
   if (budgetCurrency) budgetCurrency.value = "VES";
 
   renderTodo();
+  mostrarToast("Presupuesto guardado.", "success");
 }
 
 function eliminarPresupuesto(category) {
@@ -665,6 +779,7 @@ function eliminarPresupuesto(category) {
   delete budgets[category];
   guardarDatos();
   renderTodo();
+  mostrarToast("Presupuesto eliminado.", "success");
 }
 
 function obtenerEstadoPresupuesto(category) {
@@ -756,6 +871,31 @@ function actualizarResumen() {
   if (balanceEl) balanceEl.textContent = formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency);
 }
 
+function actualizarResumenMesActual() {
+  const hoy = new Date();
+  const mesActual = convertirFechaInput(new Date(hoy.getFullYear(), hoy.getMonth(), 1)).slice(0, 7);
+  const delMes = transactions.filter(t => t.date.startsWith(mesActual));
+
+  const ingresosVES = delMes.filter(t => t.type === "ingreso").reduce((sum, t) => sum + t.amountVES, 0);
+  const gastosVES = delMes.filter(t => t.type === "gasto").reduce((sum, t) => sum + t.amountVES, 0);
+  const balanceVES = ingresosVES - gastosVES;
+
+  const monthLabel = document.getElementById("currentMonthLabel");
+  const monthIncome = document.getElementById("monthIncome");
+  const monthExpense = document.getElementById("monthExpense");
+  const monthBalance = document.getElementById("monthBalance");
+
+  if (monthLabel) {
+    monthLabel.textContent = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toLocaleDateString("es-VE", {
+      month: "long",
+      year: "numeric"
+    });
+  }
+  if (monthIncome) monthIncome.textContent = formatMoney(convertFromVES(ingresosVES, displayCurrency), displayCurrency);
+  if (monthExpense) monthExpense.textContent = formatMoney(convertFromVES(gastosVES, displayCurrency), displayCurrency);
+  if (monthBalance) monthBalance.textContent = formatMoney(convertFromVES(balanceVES, displayCurrency), displayCurrency);
+}
+
 function actualizarResumenAhorro() {
   const totalIncomeVES = transactions.filter(t => t.type === "ingreso").reduce((sum, t) => sum + t.amountVES, 0);
   const totalExpenseVES = transactions.filter(t => t.type === "gasto").reduce((sum, t) => sum + t.amountVES, 0);
@@ -784,7 +924,7 @@ function guardarMetaAhorro(e) {
   const currency = document.getElementById("savingGoalCurrency")?.value;
 
   if (isNaN(value) || value < 0 || !currency) {
-    alert("Ingresa una meta válida.");
+    mostrarToast("Ingresa una meta válida.", "error");
     return;
   }
 
@@ -797,6 +937,7 @@ function guardarMetaAhorro(e) {
   }));
 
   renderTodo();
+  mostrarToast("Meta de ahorro guardada.", "success");
 }
 
 function cargarMetaAhorro() {
@@ -861,9 +1002,58 @@ function mostrarAlertasCashea() {
   contenedor.innerHTML = alertas.join("");
 }
 
+function editarCompraCashea(id) {
+  const purchase = casheaPurchases.find(item => item.id === id);
+  if (!purchase) return;
+
+  document.getElementById("casheaPurchaseId").value = String(purchase.id);
+  document.getElementById("casheaDescription").value = purchase.description;
+  document.getElementById("casheaCategory").value = purchase.category;
+  document.getElementById("casheaDate").value = purchase.date;
+  document.getElementById("casheaCurrency").value = purchase.currency;
+  document.getElementById("casheaTotalAmountInput").value = purchase.totalOriginal;
+  document.getElementById("casheaInitialAmountInput").value = purchase.initialOriginal;
+  document.getElementById("casheaInstallmentsCount").value = purchase.installmentsCount;
+  document.getElementById("casheaInstallmentAmount").value = purchase.installmentOriginal;
+  document.getElementById("casheaFirstPaymentDate").value = purchase.firstPaymentDate;
+  document.getElementById("casheaNotes").value = purchase.notes || "";
+
+  document.getElementById("casheaFormTitle").textContent = "Editando compra Cashea";
+  document.getElementById("casheaSubmitBtn").textContent = "Guardar cambios";
+  document.getElementById("cancelCasheaEditBtn").classList.remove("hidden");
+
+  const formSection = document.getElementById("casheaForm")?.closest(".form-section");
+  if (formSection) formSection.classList.add("editing");
+
+  cambiarTab("cashea");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelarEdicionCashea() {
+  limpiarFormularioCashea();
+  mostrarToast("Edición de Cashea cancelada.", "info");
+}
+
+function limpiarFormularioCashea() {
+  document.getElementById("casheaForm")?.reset();
+  document.getElementById("casheaPurchaseId").value = "";
+  document.getElementById("casheaFormTitle").textContent = "Nueva compra Cashea";
+  document.getElementById("casheaSubmitBtn").textContent = "Guardar compra Cashea";
+  document.getElementById("cancelCasheaEditBtn").classList.add("hidden");
+
+  const casheaCurrency = document.getElementById("casheaCurrency");
+  if (casheaCurrency) casheaCurrency.value = "VES";
+
+  const formSection = document.getElementById("casheaForm")?.closest(".form-section");
+  if (formSection) formSection.classList.remove("editing");
+
+  configurarFecha();
+}
+
 function guardarCompraCashea(e) {
   e.preventDefault();
 
+  const existingId = document.getElementById("casheaPurchaseId")?.value;
   const description = document.getElementById("casheaDescription")?.value.trim();
   const category = document.getElementById("casheaCategory")?.value;
   const date = document.getElementById("casheaDate")?.value;
@@ -876,17 +1066,17 @@ function guardarCompraCashea(e) {
   const notes = document.getElementById("casheaNotes")?.value.trim();
 
   if (!description || !category || !date || !currency || !firstPaymentDate || isNaN(totalOriginal) || isNaN(initialOriginal) || isNaN(installmentsCount) || isNaN(installmentOriginal)) {
-    alert("Completa todos los campos de Cashea.");
+    mostrarToast("Completa todos los campos de Cashea.", "error");
     return;
   }
 
   if (totalOriginal <= 0 || initialOriginal < 0 || installmentsCount <= 0 || installmentOriginal < 0) {
-    alert("Los montos de Cashea deben ser válidos.");
+    mostrarToast("Los montos de Cashea deben ser válidos.", "error");
     return;
   }
 
   if (initialOriginal > totalOriginal) {
-    alert("La inicial no puede ser mayor al monto total.");
+    mostrarToast("La inicial no puede ser mayor al monto total.", "warning");
     return;
   }
 
@@ -896,12 +1086,12 @@ function guardarCompraCashea(e) {
     if (!confirmar) return;
   }
 
-  const purchaseId = Date.now();
+  const purchaseId = existingId ? Number(existingId) : Date.now();
   const totalVES = convertToVES(totalOriginal, currency);
   const initialVES = convertToVES(initialOriginal, currency);
   const installmentVES = convertToVES(installmentOriginal, currency);
 
-  const installments = Array.from({ length: installmentsCount }, (_, index) => ({
+  let installments = Array.from({ length: installmentsCount }, (_, index) => ({
     number: index + 1,
     amountOriginal: installmentOriginal,
     amountVES: installmentVES,
@@ -910,7 +1100,27 @@ function guardarCompraCashea(e) {
     paidDate: null
   }));
 
-  casheaPurchases.push({
+  if (existingId) {
+    const previous = casheaPurchases.find(item => item.id === purchaseId);
+    if (previous) {
+      installments = installments.map(newInst => {
+        const oldInst = previous.installments.find(i => i.number === newInst.number);
+        if (oldInst) {
+          return {
+            ...newInst,
+            paid: oldInst.paid,
+            paidDate: oldInst.paidDate || null
+          };
+        }
+        return newInst;
+      });
+    }
+
+    eliminarTransaccionesDeCompraCashea(purchaseId);
+    casheaPurchases = casheaPurchases.filter(item => item.id !== purchaseId);
+  }
+
+  const purchase = {
     id: purchaseId,
     description,
     category,
@@ -927,7 +1137,9 @@ function guardarCompraCashea(e) {
     firstPaymentDate,
     installments,
     notes: notes || ""
-  });
+  };
+
+  casheaPurchases.push(purchase);
 
   if (initialOriginal > 0) {
     crearTransaccionDesdeCashea({
@@ -941,15 +1153,26 @@ function guardarCompraCashea(e) {
     });
   }
 
+  purchase.installments.forEach(inst => {
+    if (inst.paid) {
+      crearTransaccionDesdeCashea({
+        description: `${description} - Cuota ${inst.number} Cashea`,
+        category,
+        date: inst.paidDate || inst.dueDate,
+        amountOriginal: inst.amountOriginal,
+        currency,
+        casheaPurchaseId: purchaseId,
+        cuotaNumero: inst.number,
+        esInicial: false
+      });
+    }
+  });
+
   guardarDatos();
-  document.getElementById("casheaForm")?.reset();
-
-  const casheaCurrency = document.getElementById("casheaCurrency");
-  if (casheaCurrency) casheaCurrency.value = "VES";
-
-  configurarFecha();
+  limpiarFormularioCashea();
   llenarMesesReporte();
   renderTodo();
+  mostrarToast(existingId ? "Compra Cashea actualizada." : "Compra Cashea guardada.", "success");
 }
 
 function toggleCasheaInstallment(purchaseId, installmentNumber) {
@@ -973,8 +1196,15 @@ function toggleCasheaInstallment(purchaseId, installmentNumber) {
       cuotaNumero: installment.number,
       esInicial: false
     });
+    mostrarToast("Cuota marcada como pagada.", "success");
   } else {
-    eliminarTransaccionCashea(purchase.id, installment.number, false);
+    transactions = transactions.filter(t => !(
+      t.origin === "cashea" &&
+      t.casheaPurchaseId === purchase.id &&
+      t.cuotaNumero === installment.number &&
+      !Boolean(t.esInicial)
+    ));
+    mostrarToast("Pago de cuota revertido.", "info");
   }
 
   guardarDatos();
@@ -985,28 +1215,23 @@ function toggleCasheaInstallment(purchaseId, installmentNumber) {
 function eliminarCompraCashea(id) {
   if (!confirm("¿Deseas eliminar esta compra Cashea?")) return;
 
-  eliminarTransaccionCashea(id, null, true);
-
-  const compra = casheaPurchases.find(item => item.id === id);
-  if (compra) {
-    compra.installments.forEach(inst => eliminarTransaccionCashea(id, inst.number, false));
-  }
-
+  eliminarTransaccionesDeCompraCashea(id);
   casheaPurchases = casheaPurchases.filter(item => item.id !== id);
   guardarDatos();
   llenarMesesReporte();
   renderTodo();
+  mostrarToast("Compra Cashea eliminada.", "success");
 }
 
 function calcularResumenCompraCashea(purchase) {
   const paidInstallmentsVES = purchase.installments.filter(item => item.paid).reduce((sum, item) => sum + item.amountVES, 0);
   const paidTotalVES = purchase.initialVES + paidInstallmentsVES;
   const pendingVES = Math.max(purchase.totalVES - paidTotalVES, 0);
-  const pendingInstallments = purchase.installments.filter(item => !item.paid).length;
   const nextInstallment = purchase.installments.find(item => !item.paid) || null;
   const overdueCount = purchase.installments.filter(item => !item.paid && fechaEstaVencida(item.dueDate)).length;
+  const progress = purchase.totalVES > 0 ? Math.min((paidTotalVES / purchase.totalVES) * 100, 100) : 0;
 
-  return { paidTotalVES, pendingVES, pendingInstallments, nextInstallment, overdueCount };
+  return { paidTotalVES, pendingVES, nextInstallment, overdueCount, progress };
 }
 
 function mostrarComprasCashea() {
@@ -1041,7 +1266,20 @@ function mostrarComprasCashea() {
               </div>
               ${resumen.overdueCount > 0 ? `<div class="transaction-notes">Tienes ${resumen.overdueCount} cuota(s) vencida(s)</div>` : ""}
             </div>
-            <button class="btn btn-danger btn-small" onclick="eliminarCompraCashea(${purchase.id})">Eliminar</button>
+            <div class="transaction-actions">
+              <button class="btn btn-warning btn-small" onclick="editarCompraCashea(${purchase.id})">Editar</button>
+              <button class="btn btn-danger btn-small" onclick="eliminarCompraCashea(${purchase.id})">Eliminar</button>
+            </div>
+          </div>
+
+          <div class="cashea-progress-block">
+            <div class="cashea-progress-head">
+              <span>Progreso pagado</span>
+              <strong>${resumen.progress.toFixed(0)}%</strong>
+            </div>
+            <div class="budget-progress">
+              <div class="budget-progress-bar" style="width:${resumen.progress}%"></div>
+            </div>
           </div>
 
           <div class="cashea-installments">
@@ -1218,6 +1456,7 @@ function toggleDarkMode() {
   document.body.classList.toggle("light-mode");
   localStorage.setItem("themeMode", document.body.classList.contains("light-mode") ? "light" : "dark");
   actualizarBotonTema();
+  mostrarToast("Tema actualizado.", "info");
 }
 
 function inicializarTema() {
@@ -1232,6 +1471,7 @@ function guardarConfiguracionMoneda() {
   localStorage.setItem("displayCurrency", displayCurrency);
   renderTodo();
   generarReporteSiExiste();
+  mostrarToast("Moneda de visualización actualizada.", "success");
 }
 
 function cargarConfiguracionMoneda() {
@@ -1249,7 +1489,7 @@ function guardarTasas() {
   const usdt = parseFloat(document.getElementById("rateUSDT")?.value);
 
   if ([usd, eur, usdt].some(v => isNaN(v) || v <= 0)) {
-    alert("Ingresa tasas válidas mayores a 0.");
+    mostrarToast("Ingresa tasas válidas mayores a 0.", "error");
     return;
   }
 
@@ -1267,7 +1507,7 @@ function guardarTasas() {
   pintarFormularioTasas();
   renderTodo();
   generarReporteSiExiste();
-  alert("✅ Tasas guardadas manualmente.");
+  mostrarToast("Tasas guardadas manualmente.", "success");
 }
 
 function cargarTasas() {
@@ -1387,11 +1627,12 @@ function descargarDatos() {
   a.download = `finanzas_venezuela_${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  mostrarToast("Archivo JSON descargado.", "success");
 }
 
 function exportarCSV() {
   if (transactions.length === 0 && casheaPurchases.length === 0) {
-    alert("No hay datos para exportar.");
+    mostrarToast("No hay datos para exportar.", "warning");
     return;
   }
 
@@ -1431,6 +1672,7 @@ function exportarCSV() {
   a.download = `finanzas_venezuela_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+  mostrarToast("Archivo CSV descargado.", "success");
 }
 
 function escaparCSV(valor) {
@@ -1448,23 +1690,23 @@ function limpiarDatos() {
   localStorage.removeItem("savingGoal");
   guardarDatos();
   limpiarFormularioTransaccion();
+  limpiarFormularioCashea();
   llenarMesesReporte();
   renderTodo();
 
   const savingGoalInput = document.getElementById("savingGoalInput");
   const savingGoalCurrency = document.getElementById("savingGoalCurrency");
   const budgetCurrency = document.getElementById("budgetCurrency");
-  const casheaForm = document.getElementById("casheaForm");
 
   if (savingGoalInput) savingGoalInput.value = "";
   if (savingGoalCurrency) savingGoalCurrency.value = "VES";
   if (budgetCurrency) budgetCurrency.value = "VES";
-  if (casheaForm) casheaForm.reset();
 
   const reportContent = document.getElementById("reportContent");
   if (reportContent) reportContent.innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
 
   configurarFecha();
+  mostrarToast("Datos eliminados.", "success");
 }
 
 function formatearFecha(fecha) {
