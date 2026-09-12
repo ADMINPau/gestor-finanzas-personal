@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body data-theme="noche">
+<body class="theme-dark">
   <div class="container">
     <header class="header">
       <div>
@@ -17,12 +17,7 @@
       </div>
 
       <div class="header-buttons">
-        <select id="themeSelector" class="theme-select" onchange="cambiarTema()">
-          <option value="noche">Tema noche</option>
-          <option value="perla">Tema perla</option>
-          <option value="grafito">Tema grafito</option>
-        </select>
-
+        <button class="btn btn-secondary" id="themeToggleBtn" onclick="toggleTheme()">Tema claro</button>
         <button class="btn btn-secondary" onclick="descargarDatos()">JSON</button>
         <button class="btn btn-secondary" onclick="document.getElementById('importJsonInput').click()">Importar JSON</button>
         <button class="btn btn-secondary" onclick="exportarCSV()">CSV</button>
@@ -72,18 +67,18 @@
     </section>
 
     <div class="tabs">
-      <button class="tab-btn tab-transacciones active" onclick="cambiarTab('transacciones')">Transacciones</button>
-      <button class="tab-btn tab-cashea" onclick="cambiarTab('cashea')">Cashea</button>
-      <button class="tab-btn tab-graficos" onclick="cambiarTab('graficos')">Gráficos</button>
-      <button class="tab-btn tab-reportes" onclick="cambiarTab('reportes')">Reportes</button>
-      <button class="tab-btn tab-configuracion" onclick="cambiarTab('configuracion')">Configuración</button>
+      <button class="tab-btn active" onclick="cambiarTab('transacciones')">Transacciones</button>
+      <button class="tab-btn" onclick="cambiarTab('cashea')">Cashea</button>
+      <button class="tab-btn" onclick="cambiarTab('graficos')">Gráficos</button>
+      <button class="tab-btn" onclick="cambiarTab('reportes')">Reportes</button>
+      <button class="tab-btn" onclick="cambiarTab('configuracion')">Configuración</button>
     </div>
 
     <div id="tab-transacciones" class="tab-content active">
       <div class="main-content">
         <aside class="sidebar">
-          <section class="form-section form-transaccion">
-            <h2 id="transactionFormTitle" class="section-title icon-plus">Nueva Transacción</h2>
+          <section class="form-section">
+            <h2 id="transactionFormTitle" class="section-title">Nueva Transacción</h2>
             <form id="transactionForm">
               <input type="hidden" id="transactionId" />
 
@@ -108,7 +103,7 @@
               </div>
 
               <div class="conversion-box">
-                <h3 class="mini-title icon-convert">Equivalencias en vivo</h3>
+                <h3 class="mini-title">Equivalencias en vivo</h3>
                 <p id="conversionSource" class="conversion-source">Fuente: —</p>
                 <div id="liveConversionList" class="conversion-list">
                   <p class="empty-message">Ingresa un monto para ver conversiones</p>
@@ -144,7 +139,7 @@
           </section>
 
           <section class="form-section">
-            <h2 class="section-title icon-target">Meta de ahorro</h2>
+            <h2 class="section-title">Meta de ahorro</h2>
             <form id="savingGoalForm">
               <div class="form-group">
                 <label for="savingGoalInput">Objetivo</label>
@@ -162,7 +157,7 @@
               <button type="submit" class="btn btn-primary">Guardar Meta</button>
             </form>
 
-            <div class="mini-bank-grid" style="margin-top: 16px;">
+            <div class="mini-bank-grid section-spacing">
               <div class="mini-bank-card">
                 <span>Meta</span>
                 <strong id="savingGoalAmount">Bs 0,00</strong>
@@ -181,7 +176,7 @@
               </div>
             </div>
 
-            <div style="margin-top: 15px;">
+            <div class="section-spacing">
               <div class="budget-progress">
                 <div id="savingGoalBar" class="budget-progress-bar" style="width: 0%"></div>
               </div>
@@ -189,7 +184,7 @@
           </section>
 
           <section class="form-section">
-            <h2 class="section-title icon-folder">Categorías personalizadas</h2>
+            <h2 class="section-title">Categorías personalizadas</h2>
             <form id="categoryForm">
               <div class="form-group">
                 <label for="newCategoryName">Nombre de la categoría</label>
@@ -201,11 +196,11 @@
               </div>
               <button type="submit" class="btn btn-primary">Agregar Categoría</button>
             </form>
-            <div id="customCategoriesList" class="budgets-list" style="margin-top: 15px;"></div>
+            <div id="customCategoriesList" class="budgets-list section-spacing"></div>
           </section>
 
           <section class="form-section">
-            <h2 class="section-title icon-briefcase">Establecer Presupuesto</h2>
+            <h2 class="section-title">Establecer Presupuesto</h2>
             <form id="budgetForm">
               <div class="form-group">
                 <label for="budgetCategory">Categoría</label>
@@ -244,7 +239,7 @@
           </div>
 
           <section class="list-section">
-            <h2 class="section-title icon-briefcase">Presupuestos por Categoría</h2>
+            <h2 class="section-title">Presupuestos por Categoría</h2>
             <div id="budgetAlerts"></div>
             <div id="budgetsList" class="budgets-list">
               <p class="empty-message">No hay presupuestos establecidos</p>
@@ -252,7 +247,7 @@
           </section>
 
           <section class="list-section">
-            <h2 class="section-title icon-list">Transacciones</h2>
+            <h2 class="section-title">Transacciones</h2>
             <div id="transactionsList" class="transactions-list">
               <p class="empty-message">No hay transacciones registradas</p>
             </div>
@@ -264,8 +259,8 @@
     <div id="tab-cashea" class="tab-content">
       <div class="main-content">
         <aside class="sidebar">
-          <section class="form-section form-cashea">
-            <h2 id="casheaFormTitle" class="section-title icon-cart">Nueva compra Cashea</h2>
+          <section class="form-section">
+            <h2 id="casheaFormTitle" class="section-title">Nueva compra Cashea</h2>
             <form id="casheaForm">
               <input type="hidden" id="casheaPurchaseId" />
 
@@ -332,7 +327,7 @@
 
         <main class="content">
           <section class="list-section">
-            <h2 class="section-title icon-card">Resumen Cashea</h2>
+            <h2 class="section-title">Resumen Cashea</h2>
             <div class="mini-bank-grid">
               <div class="mini-bank-card">
                 <span>Total</span>
@@ -354,7 +349,7 @@
           </section>
 
           <section class="list-section">
-            <h2 class="section-title icon-card">Compras Cashea</h2>
+            <h2 class="section-title">Compras Cashea</h2>
             <div id="casheaAlerts"></div>
             <div id="casheaList" class="transactions-list">
               <p class="empty-message">No hay compras Cashea registradas</p>
@@ -367,13 +362,13 @@
     <div id="tab-graficos" class="tab-content">
       <div class="charts-container">
         <section class="chart-section">
-          <h2 class="section-title icon-chart">Gastos por Categoría</h2>
+          <h2 class="section-title">Gastos por Categoría</h2>
           <div class="chart-wrapper">
             <canvas id="gastosChart"></canvas>
           </div>
         </section>
         <section class="chart-section">
-          <h2 class="section-title icon-bars">Ingresos vs Gastos</h2>
+          <h2 class="section-title">Ingresos vs Gastos</h2>
           <div class="chart-wrapper">
             <canvas id="balanceChart"></canvas>
           </div>
@@ -383,7 +378,7 @@
 
     <div id="tab-reportes" class="tab-content">
       <section class="report-section">
-        <h2 class="section-title icon-report">Reporte Mensual</h2>
+        <h2 class="section-title">Reporte Mensual</h2>
         <div class="report-filters">
           <select id="reportMonth" class="filter-input">
             <option value="">Selecciona un mes</option>
@@ -398,10 +393,10 @@
 
     <div id="tab-configuracion" class="tab-content">
       <section class="report-section">
-        <h2 class="section-title icon-settings">Configuración de Monedas</h2>
+        <h2 class="section-title">Configuración de Monedas</h2>
 
         <div class="rate-card">
-          <h3 class="mini-title icon-display">Moneda de visualización</h3>
+          <h3 class="mini-title">Moneda de visualización</h3>
           <div class="form-group">
             <label for="displayCurrency">Mostrar toda la app en</label>
             <select id="displayCurrency" class="filter-input" onchange="guardarConfiguracionMoneda()">
@@ -415,7 +410,7 @@
 
         <div class="rate-card">
           <div class="rates-header-row">
-            <h3 class="mini-title icon-bank">Referencias de tasas</h3>
+            <h3 class="mini-title">Referencias de tasas</h3>
             <span id="ratesSourceBadge" class="source-badge manual">Manual</span>
           </div>
 
@@ -452,7 +447,7 @@
 
         <div class="rate-card">
           <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas manualmente</button>
-          <button id="autoRatesButton" class="btn btn-secondary full-width" style="margin-top: 10px;" onclick="actualizarTasasAutomaticamente()">
+          <button id="autoRatesButton" class="btn btn-secondary full-width" onclick="actualizarTasasAutomaticamente()">
             Actualizar USD/EUR desde BCV
           </button>
           <p class="config-help">
