@@ -338,7 +338,8 @@ canvas {
 .form-group input,
 .form-group select,
 .form-group textarea,
-.filter-input {
+.filter-input,
+select {
   width: 100%;
   padding: 11px 13px;
   border: 1px solid var(--border-color);
@@ -346,6 +347,9 @@ canvas {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
   transition: var(--transition);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .form-group input:focus,
@@ -360,8 +364,24 @@ canvas {
 body.light-mode .form-group input,
 body.light-mode .form-group select,
 body.light-mode .form-group textarea,
-body.light-mode .filter-input {
+body.light-mode .filter-input,
+body.light-mode select {
   background: rgba(255, 255, 255, 0.75);
+}
+
+select option {
+  background: #ffffff;
+  color: #111827;
+}
+
+body.light-mode select option {
+  background: #ffffff;
+  color: #111827;
+}
+
+body:not(.light-mode) select option {
+  background: #0f172a;
+  color: #f8fafc;
 }
 
 .form-group textarea {
