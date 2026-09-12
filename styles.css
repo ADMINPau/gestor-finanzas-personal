@@ -51,6 +51,10 @@ body.light-mode {
   min-width: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background: var(--background-color);
@@ -58,6 +62,19 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img,
+canvas {
+  max-width: 100%;
+  display: block;
 }
 
 .container {
@@ -79,7 +96,8 @@ body {
 .transaction-item,
 .budget-item,
 .report-item,
-.cashea-card {
+.cashea-card,
+.rates-meta-card {
   background: var(--card-background);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -106,7 +124,7 @@ body {
 }
 
 .subtitle {
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.95rem;
 }
 
@@ -161,13 +179,18 @@ body {
 
 .tab-btn {
   border: 1px solid var(--border-color);
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
   padding: 11px 16px 11px 38px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
   position: relative;
+  transition: var(--transition);
+}
+
+.tab-btn:hover {
+  transform: translateY(-1px);
 }
 
 .tab-btn::before {
@@ -258,18 +281,24 @@ body {
   border-radius: 50%;
 }
 
-.mini-bank-grid {
+.mini-bank-grid,
+.cashea-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
-.mini-bank-card {
+.mini-bank-card,
+.cashea-mini-card {
   border-radius: 16px;
   padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
 }
 
-.mini-bank-card span {
+.mini-bank-card span,
+.cashea-mini-card span,
+.meta-label {
   display: block;
   font-size: 0.78rem;
   color: var(--text-secondary);
@@ -278,7 +307,8 @@ body {
   letter-spacing: 0.5px;
 }
 
-.mini-bank-card strong {
+.mini-bank-card strong,
+.cashea-mini-card strong {
   display: block;
   font-size: 1rem;
   font-weight: 800;
@@ -313,15 +343,25 @@ body {
   padding: 11px 13px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
+  transition: var(--transition);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: rgba(6, 182, 212, 0.55);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.12);
 }
 
 body.light-mode .form-group input,
 body.light-mode .form-group select,
 body.light-mode .form-group textarea,
 body.light-mode .filter-input {
-  background: rgba(255,255,255,0.75);
+  background: rgba(255, 255, 255, 0.75);
 }
 
 .form-group textarea {
@@ -346,6 +386,17 @@ body.light-mode .filter-input {
   padding: 10px 14px;
   cursor: pointer;
   font-weight: 700;
+  transition: var(--transition);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-primary {
@@ -355,14 +406,14 @@ body.light-mode .filter-input {
 }
 
 .btn-secondary {
-  background: rgba(255,255,255,0.10);
+  background: rgba(255, 255, 255, 0.10);
   color: white;
-  border-color: rgba(255,255,255,0.1);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 body.light-mode .btn-secondary {
   color: var(--text-primary);
-  background: rgba(255,255,255,0.74);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .filter-reset-btn {
@@ -410,7 +461,8 @@ body.light-mode .btn-secondary {
 .report-item,
 .custom-category-item,
 .conversion-item,
-.cashea-installment {
+.cashea-installment,
+.cashea-card {
   border-radius: 16px;
   padding: 14px;
 }
@@ -534,40 +586,14 @@ body.light-mode .btn-secondary {
   padding: 18px;
 }
 
-.cashea-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-
 .cashea-card {
   border-radius: 18px;
-  padding: 16px;
-}
-
-.cashea-mini-card {
-  background: rgba(255,255,255,0.05);
+  background: var(--card-background);
   border: 1px solid var(--border-color);
-  border-radius: 14px;
-  padding: 12px;
-}
-
-body.light-mode .cashea-mini-card,
-body.light-mode .cashea-installment,
-body.light-mode .conversion-item,
-body.light-mode .mini-bank-card {
-  background: rgba(255,255,255,0.72);
-}
-
-.cashea-mini-card span {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
 }
 
 .cashea-installment {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
 }
 
@@ -588,7 +614,88 @@ body.light-mode .mini-bank-card {
 }
 
 .conversion-item {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Tasas */
+.rates-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.source-badge.manual {
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+body.light-mode .source-badge.manual {
+  color: #475569;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.source-badge.external {
+  background: rgba(34, 197, 94, 0.16);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+body.light-mode .source-badge.external {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.16);
+}
+
+.rates-meta-card {
+  margin-top: 16px;
+  border-radius: 16px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.light-mode .rates-meta-card,
+body.light-mode .mini-bank-card,
+body.light-mode .cashea-mini-card,
+body.light-mode .cashea-installment,
+body.light-mode .conversion-item {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.rates-meta-item {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.light-mode .rates-meta-item {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.rates-meta-item strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1100px) {
@@ -639,5 +746,9 @@ body.light-mode .mini-bank-card {
 
   .header-buttons .btn {
     flex: 1 1 100%;
+  }
+
+  .rates-header-row {
+    align-items: flex-start;
   }
 }
