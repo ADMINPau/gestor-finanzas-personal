@@ -27,17 +27,14 @@
         <span class="kpi-label">Ingresos</span>
         <strong class="kpi-value" id="totalIncome">Bs 0,00</strong>
       </div>
-
       <div class="kpi-card expense">
         <span class="kpi-label">Gastos</span>
         <strong class="kpi-value" id="totalExpense">Bs 0,00</strong>
       </div>
-
       <div class="kpi-card balance">
         <span class="kpi-label">Balance</span>
         <strong class="kpi-value" id="balance">Bs 0,00</strong>
       </div>
-
       <div class="kpi-card budget">
         <span class="kpi-label">Próximo pago</span>
         <strong class="kpi-value" id="casheaNextPayment">Sin cuotas</strong>
@@ -74,9 +71,9 @@
                 <label for="transactionCurrency">Moneda de la transacción:</label>
                 <select id="transactionCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
-                  <option value="USD">Dólar BCV (simulado)</option>
-                  <option value="EUR">Euro BCV (simulado)</option>
-                  <option value="USDT">USDT Binance (simulado)</option>
+                  <option value="USD">Dólar BCV</option>
+                  <option value="EUR">Euro BCV</option>
+                  <option value="USDT">USDT referencia</option>
                 </select>
               </div>
 
@@ -127,9 +124,9 @@
                 <label for="savingGoalCurrency">Moneda de la meta:</label>
                 <select id="savingGoalCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
-                  <option value="USD">Dólar BCV (simulado)</option>
-                  <option value="EUR">Euro BCV (simulado)</option>
-                  <option value="USDT">USDT Binance (simulado)</option>
+                  <option value="USD">Dólar BCV</option>
+                  <option value="EUR">Euro BCV</option>
+                  <option value="USDT">USDT referencia</option>
                 </select>
               </div>
               <button type="submit" class="btn btn-primary">Guardar Meta</button>
@@ -159,6 +156,46 @@
                 <div id="savingGoalBar" class="budget-progress-bar" style="width: 0%"></div>
               </div>
             </div>
+          </section>
+
+          <section class="form-section">
+            <h2 class="section-title icon-folder">Categorías personalizadas</h2>
+            <form id="categoryForm">
+              <div class="form-group">
+                <label for="newCategoryName">Nombre de la categoría:</label>
+                <input type="text" id="newCategoryName" placeholder="Ej: mascotas" required />
+              </div>
+              <div class="form-group">
+                <label for="newCategoryEmoji">Emoji:</label>
+                <input type="text" id="newCategoryEmoji" placeholder="🐶" maxlength="4" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Agregar Categoría</button>
+            </form>
+            <div id="customCategoriesList" class="budgets-list" style="margin-top: 15px;"></div>
+          </section>
+
+          <section class="form-section">
+            <h2 class="section-title icon-briefcase">Establecer Presupuesto</h2>
+            <form id="budgetForm">
+              <div class="form-group">
+                <label for="budgetCategory">Categoría:</label>
+                <select id="budgetCategory" required></select>
+              </div>
+              <div class="form-group">
+                <label for="budgetAmount">Monto:</label>
+                <input type="number" id="budgetAmount" step="0.01" min="0" required />
+              </div>
+              <div class="form-group">
+                <label for="budgetCurrency">Moneda del presupuesto:</label>
+                <select id="budgetCurrency" required>
+                  <option value="VES">Bolívar (VES)</option>
+                  <option value="USD">Dólar BCV</option>
+                  <option value="EUR">Euro BCV</option>
+                  <option value="USDT">USDT referencia</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
+            </form>
           </section>
         </aside>
 
@@ -217,9 +254,9 @@
                 <label for="casheaCurrency">Moneda:</label>
                 <select id="casheaCurrency" required>
                   <option value="VES">Bolívar (VES)</option>
-                  <option value="USD">Dólar BCV (simulado)</option>
-                  <option value="EUR">Euro BCV (simulado)</option>
-                  <option value="USDT">USDT Binance (simulado)</option>
+                  <option value="USD">Dólar BCV</option>
+                  <option value="EUR">Euro BCV</option>
+                  <option value="USDT">USDT referencia</option>
                 </select>
               </div>
 
@@ -342,28 +379,50 @@
         </div>
 
         <div class="rate-card">
-          <h3 class="mini-title icon-bank">USD y EUR — referencia BCV simulada</h3>
+          <div class="rates-header-row">
+            <h3 class="mini-title icon-bank">Referencias de tasas</h3>
+            <span id="ratesSourceBadge" class="source-badge manual">Manual</span>
+          </div>
+
           <div class="form-group">
             <label for="rateUSD">1 USD = ? VES</label>
             <input type="number" id="rateUSD" step="0.01" min="0" />
           </div>
+
           <div class="form-group">
             <label for="rateEUR">1 EUR = ? VES</label>
             <input type="number" id="rateEUR" step="0.01" min="0" />
           </div>
-        </div>
 
-        <div class="rate-card">
-          <h3 class="mini-title icon-coin">USDT — referencia Binance simulada</h3>
           <div class="form-group">
             <label for="rateUSDT">1 USDT = ? VES</label>
             <input type="number" id="rateUSDT" step="0.01" min="0" />
+          </div>
+
+          <div class="rates-meta-card">
+            <div class="rates-meta-item">
+              <span class="meta-label">Última actualización</span>
+              <strong id="ratesLastUpdated">Sin registro</strong>
+            </div>
+            <div class="rates-meta-item">
+              <span class="meta-label">Modo</span>
+              <strong id="ratesUpdateMode">Manual</strong>
+            </div>
+            <div class="rates-meta-item">
+              <span class="meta-label">Fuente</span>
+              <strong id="ratesSourceText">Local</strong>
+            </div>
           </div>
         </div>
 
         <div class="rate-card">
           <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas</button>
-          <p class="config-help">Todo se guarda localmente en este dispositivo.</p>
+          <button id="autoRatesButton" class="btn btn-secondary full-width" style="margin-top: 10px;" onclick="actualizarTasasAutomaticamente()">
+            Actualizar tasas automáticamente
+          </button>
+          <p class="config-help">
+            La actualización automática intenta leer referencias externas. Si falla, puedes seguir usando tasas manuales sin romper la app.
+          </p>
         </div>
       </section>
     </div>
