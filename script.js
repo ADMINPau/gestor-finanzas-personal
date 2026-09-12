@@ -6,7 +6,7 @@ let balanceChart = null;
 let displayCurrency = "VES";
 let savingGoal = 0;
 
-const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJwXY6ew5yAhEEOhwdf-GLwGk7_d0YlprXE4GW_KkeTOn_HZb70ZFcEAqp0cn5B2fzSLpklW0vc0EX/pub?output=csv";
+const BCV_API_URL = "https://bcv.today/api/v1/rate.json";
 
 let exchangeRates = {
   VES: 1,
@@ -34,19 +34,17 @@ let categories = {
 
 const currencyLabels = {
   VES: "Bolívar (VES)",
-  USD: "USD BCV (referencia)",
-  EUR: "EUR BCV (referencia)",
+  USD: "USD BCV (oficial)",
+  EUR: "EUR BCV (oficial)",
   USDT: "USDT (manual)"
 };
 
 function getCurrencySourceLabel(currency) {
   if (currency === "VES") return "Moneda base";
   if (currency === "USD" || currency === "EUR") {
-    return rateMeta.mode === "automatico" ? "Google Sheets" : "Referencia manual";
+    return rateMeta.mode === "automatico" ? "BCV oficial" : "Referencia manual";
   }
-  if (currency === "USDT") {
-    return "Referencia manual";
-  }
+  if (currency === "USDT") return "Referencia manual";
   return "Referencia";
 }
 
@@ -149,7 +147,6 @@ function renderTodo() {
 
 function formatMoney(value, currency = displayCurrency) {
   const localeMap = { VES: "es-VE", USD: "en-US", EUR: "es-ES", USDT: "en-US" };
-
   if (currency === "USDT") return `${Number(value).toFixed(2)} USDT`;
 
   try {
@@ -190,7 +187,6 @@ function actualizarVistaConversion() {
   const listEl = document.getElementById("liveConversionList");
 
   if (!sourceEl || !listEl) return;
-
   sourceEl.textContent = `Fuente: ${getCurrencySourceLabel(currency)}`;
 
   if (isNaN(amount) || amount <= 0) {
@@ -201,20 +197,15 @@ function actualizarVistaConversion() {
   const amountVES = convertToVES(amount, currency);
   const currencies = ["VES", "USD", "EUR", "USDT"];
 
-  const conversions = currencies
-    .filter(code => code !== currency)
-    .map(code => `
-      <div class="conversion-item">
-        <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(convertFromVES(amountVES, code), code)}</strong>
-      </div>
-    `)
-    .join("");
-
   listEl.innerHTML = `
     <div class="conversion-item">
       <strong>Monto en VES interno:</strong> ${formatMoney(amountVES, "VES")}
     </div>
-    ${conversions}
+    ${currencies.filter(code => code !== currency).map(code => `
+      <div class="conversion-item">
+        <strong>${formatMoney(amount, currency)}</strong> = <strong>${formatMoney(convertFromVES(amountVES, code), code)}</strong>
+      </div>
+    `).join("")}
   `;
 }
 
@@ -229,14 +220,14 @@ function actualizarPanelTasas() {
   if (sourceTextEl) sourceTextEl.textContent = rateMeta.source || "Local";
 
   if (badgeEl) {
-    badgeEl.textContent = rateMeta.mode === "automatico" ? "Google Sheets" : "Manual";
+    badgeEl.textContent = rateMeta.mode === "automatico" ? "BCV oficial" : "Manual";
     badgeEl.className = `source-badge ${rateMeta.mode === "automatico" ? "external" : "manual"}`;
   }
 }
 
 async function actualizarTasasAutomaticamente() {
   const boton = document.getElementById("autoRatesButton");
-  const textoOriginal = boton?.textContent || "Actualizar USD/EUR desde Google Sheets";
+  const textoOriginal = boton?.textContent || "Actualizar USD/EUR desde BCV";
 
   try {
     if (boton) {
@@ -244,21 +235,22 @@ async function actualizarTasasAutomaticamente() {
       boton.textContent = "Actualizando...";
     }
 
-    const tasas = await obtenerTasasDesdeGoogleSheets();
+    const tasas = await obtenerTasasDesdeBCV();
 
     if (!tasas || (!tasas.USD && !tasas.EUR)) {
-      alert("No se pudieron actualizar USD y EUR desde Google Sheets.");
+      alert("No se pudieron actualizar USD y EUR desde la fuente BCV.");
       return;
     }
 
     if (tasas.USD && tasas.USD > 0) exchangeRates.USD = tasas.USD;
     if (tasas.EUR && tasas.EUR > 0) exchangeRates.EUR = tasas.EUR;
-    // USDT queda manual y no se toca
 
     rateMeta = {
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: tasas.capturedAt || new Date().toISOString(),
       mode: "automatico",
-      source: "Google Sheets"
+      source: tasas.effectiveDate
+        ? `BCV oficial · Vigencia ${tasas.effectiveDate}`
+        : "BCV oficial"
     };
 
     guardarTasasEnStorage();
@@ -266,10 +258,10 @@ async function actualizarTasasAutomaticamente() {
     renderTodo();
     generarReporteSiExiste();
 
-    alert("✅ USD y EUR actualizados desde Google Sheets. USDT quedó manual.");
+    alert("✅ USD y EUR actualizados con tasa oficial BCV. USDT quedó manual.");
   } catch (error) {
-    console.error("Error actualizando tasas:", error);
-    alert("No se pudieron actualizar USD y EUR desde Google Sheets.");
+    console.error("Error actualizando tasas BCV:", error);
+    alert("No se pudieron actualizar USD y EUR desde la fuente BCV.");
   } finally {
     if (boton) {
       boton.disabled = false;
@@ -278,39 +270,37 @@ async function actualizarTasasAutomaticamente() {
   }
 }
 
-async function obtenerTasasDesdeGoogleSheets() {
-  const response = await fetch(GOOGLE_SHEETS_CSV_URL);
-  if (!response.ok) {
-    throw new Error("No se pudo leer el CSV publicado.");
-  }
+async function obtenerTasasDesdeBCV() {
+  const response = await fetch(BCV_API_URL);
+  if (!response.ok) throw new Error("No se pudo consultar la API BCV.");
 
-  const csv = await response.text();
-  return parseGoogleSheetCSV(csv);
+  const data = await response.json();
+
+  const usd = parseRateValue(data.USD);
+  const eur = parseRateValue(data.EUR);
+  const effectiveDate = data.date || data.effective_date || null;
+  const capturedAt = data.timestamp || data.captured_at || new Date().toISOString();
+
+  return {
+    USD: usd,
+    EUR: eur,
+    effectiveDate,
+    capturedAt
+  };
 }
 
-function parseGoogleSheetCSV(csvText) {
-  const lines = csvText
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
-
-  const tasas = { USD: null, EUR: null };
-
-  for (let i = 1; i < lines.length; i++) {
-    const row = lines[i].split(",");
-    if (row.length < 2) continue;
-
-    const moneda = String(row[0]).replace(/"/g, "").trim().toUpperCase();
-    const valorTexto = String(row[1]).replace(/"/g, "").trim();
-    const valor = parseFloat(valorTexto);
-
-    if (!Number.isNaN(valor) && valor > 0) {
-      if (moneda === "USD") tasas.USD = valor;
-      if (moneda === "EUR") tasas.EUR = valor;
-    }
+function parseRateValue(value) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return parseFloat(value.replace(",", "."));
+  if (value && typeof value === "object") {
+    if (typeof value.price === "number") return value.price;
+    if (typeof value.value === "number") return value.value;
+    if (typeof value.rate === "number") return value.rate;
+    if (typeof value.price === "string") return parseFloat(value.price.replace(",", "."));
+    if (typeof value.value === "string") return parseFloat(value.value.replace(",", "."));
+    if (typeof value.rate === "string") return parseFloat(value.rate.replace(",", "."));
   }
-
-  return tasas;
+  return NaN;
 }
 
 function getCategoryName(key) {
@@ -329,8 +319,8 @@ function llenarSelectsCategorias() {
   ["category", "budgetCategory", "filterCategory", "casheaCategory"].forEach(id => {
     const select = document.getElementById(id);
     if (!select) return;
-
     const current = select.value;
+
     select.innerHTML = id === "filterCategory"
       ? `<option value="">Todas las categorías</option>${options}`
       : `<option value="">Selecciona una categoría</option>${options}`;
@@ -348,7 +338,6 @@ function normalizarClaveCategoria(texto) {
 
 function agregarCategoriaPersonalizada(e) {
   e.preventDefault();
-
   const name = document.getElementById("newCategoryName")?.value.trim();
   const emoji = document.getElementById("newCategoryEmoji")?.value.trim();
   const key = normalizarClaveCategoria(name || "");
@@ -357,7 +346,6 @@ function agregarCategoriaPersonalizada(e) {
     alert("Completa el nombre y el emoji.");
     return;
   }
-
   if (categories[key]) {
     alert("Ya existe una categoría con ese nombre.");
     return;
@@ -380,7 +368,6 @@ function eliminarCategoriaPersonalizada(key) {
     alert("No puedes eliminar esta categoría porque ya está en uso.");
     return;
   }
-
   if (!confirm("¿Deseas eliminar esta categoría personalizada?")) return;
 
   delete categories[key];
@@ -430,7 +417,6 @@ function crearTransaccionDesdeCashea({ description, category, date, amountOrigin
     t.cuotaNumero === cuotaNumero &&
     Boolean(t.esInicial) === Boolean(esInicial)
   );
-
   if (existe) return;
 
   transactions.push({
@@ -493,12 +479,10 @@ function guardarTransaccion(e) {
       alert("No se encontró la transacción a editar.");
       return;
     }
-
     if (transactions[index].origin === "cashea") {
       alert("Las transacciones automáticas de Cashea no se editan desde aquí.");
       return;
     }
-
     transactions[index] = { ...transactions[index], ...payload };
   } else {
     transactions.push({ id: Date.now(), ...payload });
@@ -514,7 +498,6 @@ function guardarTransaccion(e) {
 function editarTransaccion(id) {
   const t = transactions.find(item => item.id === id);
   if (!t) return;
-
   if (t.origin === "cashea") {
     alert("Esta transacción fue generada automáticamente por Cashea. Debes gestionarla desde la pestaña Cashea.");
     return;
@@ -564,12 +547,10 @@ function limpiarFormularioTransaccion() {
 function eliminarTransaccion(id) {
   const transaccion = transactions.find(t => t.id === id);
   if (!transaccion) return;
-
   if (transaccion.origin === "cashea") {
     alert("Esta transacción fue generada automáticamente por Cashea. Debes cambiarla desde la compra Cashea asociada.");
     return;
   }
-
   if (!confirm("¿Deseas eliminar esta transacción?")) return;
 
   transactions = transactions.filter(t => t.id !== id);
