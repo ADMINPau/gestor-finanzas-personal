@@ -17,8 +17,10 @@
       <div class="header-buttons">
         <button class="btn btn-secondary" onclick="toggleDarkMode()">Cambiar tema</button>
         <button class="btn btn-secondary" onclick="descargarDatos()">JSON</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('importJsonInput').click()">Importar JSON</button>
         <button class="btn btn-secondary" onclick="exportarCSV()">CSV</button>
         <button class="btn btn-secondary" onclick="limpiarDatos()">Limpiar</button>
+        <input type="file" id="importJsonInput" accept=".json,application/json" hidden />
       </div>
     </header>
 
@@ -229,6 +231,8 @@
               <option value="gasto">Gastos</option>
               <option value="ingreso">Ingresos</option>
             </select>
+            <input type="date" id="filterDateFrom" class="filter-input" />
+            <input type="date" id="filterDateTo" class="filter-input" />
             <button class="btn btn-secondary filter-reset-btn" onclick="reiniciarFiltros()">Reiniciar filtros</button>
           </div>
 
@@ -254,8 +258,10 @@
       <div class="main-content">
         <aside class="sidebar">
           <section class="form-section form-cashea">
-            <h2 class="section-title icon-cart">Nueva compra Cashea</h2>
+            <h2 id="casheaFormTitle" class="section-title icon-cart">Nueva compra Cashea</h2>
             <form id="casheaForm">
+              <input type="hidden" id="casheaPurchaseId" />
+
               <div class="form-group">
                 <label for="casheaDescription">Producto o compra:</label>
                 <input type="text" id="casheaDescription" required />
@@ -311,7 +317,8 @@
                 <textarea id="casheaNotes" rows="4"></textarea>
               </div>
 
-              <button type="submit" class="btn btn-primary">Guardar compra Cashea</button>
+              <button type="submit" class="btn btn-primary" id="casheaSubmitBtn">Guardar compra Cashea</button>
+              <button type="button" class="btn btn-secondary full-width hidden" id="cancelCasheaEditBtn" onclick="cancelarEdicionCashea()">Cancelar edición</button>
             </form>
           </section>
         </aside>
