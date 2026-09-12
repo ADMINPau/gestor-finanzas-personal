@@ -272,6 +272,17 @@ button, input, select, textarea {
   font-size: 1.03rem;
 }
 
+.section-title::before,
+.mini-title::before,
+.cashea-installments h4::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  flex-shrink: 0;
+}
+
 .section-title::after,
 .mini-title::after,
 .cashea-installments h4::after {
