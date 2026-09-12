@@ -13,6 +13,12 @@ let exchangeRates = {
   USDT: 37.1
 };
 
+let rateMeta = {
+  lastUpdated: null,
+  mode: "manual",
+  source: "Local"
+};
+
 let categories = {
   alimentacion: { name: "Alimentación", emoji: "🍔", custom: false },
   transporte: { name: "Transporte", emoji: "🚗", custom: false },
@@ -26,17 +32,21 @@ let categories = {
 
 const currencyLabels = {
   VES: "Bolívar (VES)",
-  USD: "USD BCV (simulado)",
-  EUR: "EUR BCV (simulado)",
-  USDT: "USDT Binance (simulado)"
+  USD: "USD BCV (referencia)",
+  EUR: "EUR BCV (referencia)",
+  USDT: "USDT (referencia)"
 };
 
-const currencySources = {
-  VES: "Moneda base",
-  USD: "BCV simulado",
-  EUR: "BCV simulado",
-  USDT: "Binance simulado"
-};
+function getCurrencySourceLabel(currency) {
+  if (currency === "VES") return "Moneda base";
+  if (currency === "USD" || currency === "EUR") {
+    return rateMeta.mode === "automatico" ? "Referencia externa BCV" : "Referencia manual";
+  }
+  if (currency === "USDT") {
+    return rateMeta.mode === "automatico" ? "Referencia externa USDT" : "Referencia manual";
+  }
+  return "Referencia";
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   cargarTodo();
@@ -61,14 +71,10 @@ function cargarTodo() {
 
 function configurarFecha() {
   const dateInput = document.getElementById("date");
-  if (dateInput && !dateInput.value) {
-    dateInput.valueAsDate = new Date();
-  }
+  if (dateInput && !dateInput.value) dateInput.valueAsDate = new Date();
 
   const casheaDate = document.getElementById("casheaDate");
-  if (casheaDate && !casheaDate.value) {
-    casheaDate.valueAsDate = new Date();
-  }
+  if (casheaDate && !casheaDate.value) casheaDate.valueAsDate = new Date();
 
   const firstPaymentDate = document.getElementById("casheaFirstPaymentDate");
   if (firstPaymentDate && !firstPaymentDate.value) {
@@ -101,13 +107,10 @@ function inicializarEventos() {
 }
 
 function actualizarEncabezado() {
-  const ahoraCaracas = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Caracas" })
-  );
-
+  const ahoraCaracas = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Caracas" }));
   const hora = ahoraCaracas.getHours();
-  let saludo = "Hola";
 
+  let saludo = "Hola";
   if (hora >= 5 && hora < 12) saludo = "Buenos días";
   else if (hora >= 12 && hora < 19) saludo = "Buenas tardes";
   else saludo = "Buenas noches";
@@ -139,19 +142,13 @@ function renderTodo() {
   actualizarGraficos();
   actualizarVistaConversion();
   actualizarBotonTema();
+  actualizarPanelTasas();
 }
 
 function formatMoney(value, currency = displayCurrency) {
-  const localeMap = {
-    VES: "es-VE",
-    USD: "en-US",
-    EUR: "es-ES",
-    USDT: "en-US"
-  };
+  const localeMap = { VES: "es-VE", USD: "en-US", EUR: "es-ES", USDT: "en-US" };
 
-  if (currency === "USDT") {
-    return `${Number(value).toFixed(2)} USDT`;
-  }
+  if (currency === "USDT") return `${Number(value).toFixed(2)} USDT`;
 
   try {
     return new Intl.NumberFormat(localeMap[currency] || "es-VE", {
@@ -161,6 +158,17 @@ function formatMoney(value, currency = displayCurrency) {
   } catch {
     return `${Number(value).toFixed(2)} ${currency}`;
   }
+}
+
+function formatDateTime(isoString) {
+  if (!isoString) return "Sin registro";
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "Sin registro";
+
+  return date.toLocaleString("es-VE", {
+    dateStyle: "short",
+    timeStyle: "short"
+  });
 }
 
 function convertToVES(amount, currency) {
@@ -181,7 +189,7 @@ function actualizarVistaConversion() {
 
   if (!sourceEl || !listEl) return;
 
-  sourceEl.textContent = `Fuente: ${currencySources[currency]}`;
+  sourceEl.textContent = `Fuente: ${getCurrencySourceLabel(currency)}`;
 
   if (isNaN(amount) || amount <= 0) {
     listEl.innerHTML = '<p class="empty-message">Ingresa un monto para ver conversiones</p>';
@@ -208,6 +216,144 @@ function actualizarVistaConversion() {
   `;
 }
 
+function actualizarPanelTasas() {
+  const lastUpdatedEl = document.getElementById("ratesLastUpdated");
+  const modeEl = document.getElementById("ratesUpdateMode");
+  const sourceTextEl = document.getElementById("ratesSourceText");
+  const badgeEl = document.getElementById("ratesSourceBadge");
+
+  if (lastUpdatedEl) lastUpdatedEl.textContent = formatDateTime(rateMeta.lastUpdated);
+  if (modeEl) modeEl.textContent = rateMeta.mode === "automatico" ? "Automática" : "Manual";
+  if (sourceTextEl) sourceTextEl.textContent = rateMeta.source || "Local";
+
+  if (badgeEl) {
+    badgeEl.textContent = rateMeta.mode === "automatico" ? "Fuente externa" : "Manual";
+    badgeEl.className = `source-badge ${rateMeta.mode === "automatico" ? "external" : "manual"}`;
+  }
+}
+
+async function actualizarTasasAutomaticamente() {
+  const boton = document.getElementById("autoRatesButton");
+  const textoOriginal = boton?.textContent || "Actualizar tasas automáticamente";
+
+  try {
+    if (boton) {
+      boton.disabled = true;
+      boton.textContent = "Actualizando...";
+    }
+
+    const tasas = await obtenerTasasExternasSeguras();
+
+    if (!tasas || (!tasas.USD && !tasas.EUR && !tasas.USDT)) {
+      alert("No se pudieron actualizar las tasas automáticamente. Puedes seguir usando las tasas manuales.");
+      return;
+    }
+
+    if (tasas.USD && tasas.USD > 0) exchangeRates.USD = tasas.USD;
+    if (tasas.EUR && tasas.EUR > 0) exchangeRates.EUR = tasas.EUR;
+    if (tasas.USDT && tasas.USDT > 0) exchangeRates.USDT = tasas.USDT;
+
+    rateMeta = {
+      lastUpdated: new Date().toISOString(),
+      mode: "automatico",
+      source: "alcambio.app (lectura externa tolerante)"
+    };
+
+    guardarTasasEnStorage();
+    pintarFormularioTasas();
+    renderTodo();
+    generarReporteSiExiste();
+
+    alert("✅ Tasas actualizadas automáticamente.");
+  } catch (error) {
+    console.error("Error actualizando tasas:", error);
+    alert("No se pudieron actualizar las tasas automáticamente. Puedes seguir usando las tasas manuales.");
+  } finally {
+    if (boton) {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    }
+  }
+}
+
+async function obtenerTasasExternasSeguras() {
+  const candidatos = [intentarFuenteHTMLSegura];
+
+  for (const intento of candidatos) {
+    try {
+      const resultado = await intento();
+      if (resultado && (resultado.USD || resultado.EUR || resultado.USDT)) {
+        return resultado;
+      }
+    } catch (error) {
+      console.warn("Fuente externa falló:", error);
+    }
+  }
+
+  return null;
+}
+
+async function intentarFuenteHTMLSegura() {
+  const proxies = [
+    "https://api.allorigins.win/raw?url=",
+    "https://r.jina.ai/http://"
+  ];
+
+  const urlObjetivo = "https://alcambio.app/tasas";
+
+  for (const proxy of proxies) {
+    try {
+      const finalUrl = proxy.includes("r.jina.ai/http://")
+        ? `${proxy}${urlObjetivo.replace("https://", "")}`
+        : `${proxy}${encodeURIComponent(urlObjetivo)}`;
+
+      const response = await fetch(finalUrl, { method: "GET" });
+      if (!response.ok) continue;
+
+      const html = await response.text();
+      const tasas = extraerTasasDesdeTexto(html);
+
+      if (tasas.USD || tasas.EUR || tasas.USDT) {
+        return tasas;
+      }
+    } catch (error) {
+      console.warn("No se pudo leer con proxy:", proxy, error);
+    }
+  }
+
+  return null;
+}
+
+function extraerTasasDesdeTexto(texto) {
+  const limpio = texto.replace(/\s+/g, " ").replace(/,/g, ".").trim();
+
+  return {
+    USD: extraerPrimerNumeroValido(limpio, [
+      /(?:USD|Dólar|Dolar)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i,
+      /(?:BCV)\D{0,40}(?:USD|Dólar|Dolar)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i
+    ]),
+    EUR: extraerPrimerNumeroValido(limpio, [
+      /(?:EUR|Euro)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i
+    ]),
+    USDT: extraerPrimerNumeroValido(limpio, [
+      /(?:USDT)\D{0,40}(\d{1,3}(?:\.\d{1,4})?)/i
+    ])
+  };
+}
+
+function extraerPrimerNumeroValido(texto, patrones) {
+  for (const patron of patrones) {
+    const match = texto.match(patron);
+    if (!match) continue;
+
+    const valor = parseFloat(match[1]);
+    if (!isNaN(valor) && valor > 0 && valor < 1000) {
+      return valor;
+    }
+  }
+  return null;
+}
+
 function getCategoryName(key) {
   return categories[key]?.name || key;
 }
@@ -230,9 +376,7 @@ function llenarSelectsCategorias() {
       ? `<option value="">Todas las categorías</option>${options}`
       : `<option value="">Selecciona una categoría</option>${options}`;
 
-    if (current && categories[current]) {
-      select.value = current;
-    }
+    if (current && categories[current]) select.value = current;
   });
 
   const displayCurrencySelect = document.getElementById("displayCurrency");
@@ -240,12 +384,7 @@ function llenarSelectsCategorias() {
 }
 
 function normalizarClaveCategoria(texto) {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
 function agregarCategoriaPersonalizada(e) {
@@ -265,12 +404,7 @@ function agregarCategoriaPersonalizada(e) {
     return;
   }
 
-  categories[key] = {
-    name,
-    emoji,
-    custom: true
-  };
-
+  categories[key] = { name, emoji, custom: true };
   guardarCategorias();
   document.getElementById("categoryForm")?.reset();
   renderTodo();
@@ -326,21 +460,11 @@ function sumarMeses(fechaTexto, cantidadMeses) {
 function fechaEstaVencida(fechaTexto) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-
   const fecha = new Date(`${fechaTexto}T00:00:00`);
   return fecha < hoy;
 }
 
-function crearTransaccionDesdeCashea({
-  description,
-  category,
-  date,
-  amountOriginal,
-  currency,
-  casheaPurchaseId,
-  cuotaNumero = null,
-  esInicial = false
-}) {
+function crearTransaccionDesdeCashea({ description, category, date, amountOriginal, currency, casheaPurchaseId, cuotaNumero = null, esInicial = false }) {
   const existe = transactions.some(t =>
     t.origin === "cashea" &&
     t.casheaPurchaseId === casheaPurchaseId &&
@@ -418,10 +542,7 @@ function guardarTransaccion(e) {
 
     transactions[index] = { ...transactions[index], ...payload };
   } else {
-    transactions.push({
-      id: Date.now(),
-      ...payload
-    });
+    transactions.push({ id: Date.now(), ...payload });
   }
 
   guardarDatos();
@@ -601,7 +722,6 @@ function agregarPresupuesto(e) {
 
 function eliminarPresupuesto(category) {
   if (!confirm("¿Deseas eliminar este presupuesto?")) return;
-
   delete budgets[category];
   guardarDatos();
   renderTodo();
@@ -633,7 +753,6 @@ function mostrarPresupuestos() {
   if (!lista) return;
 
   const keys = Object.keys(budgets);
-
   if (keys.length === 0) {
     lista.innerHTML = '<p class="empty-message">No hay presupuestos establecidos</p>';
     return;
@@ -674,12 +793,8 @@ function mostrarAlertasPresupuesto() {
   const alertas = Object.keys(budgets)
     .map(category => {
       const estado = obtenerEstadoPresupuesto(category);
-      if (estado.exceeded) {
-        return `<div class="alert-box danger">Has superado el presupuesto de ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
-      }
-      if (estado.warning) {
-        return `<div class="alert-box warning">Estás cerca del límite en ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
-      }
+      if (estado.exceeded) return `<div class="alert-box danger">Has superado el presupuesto de ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
+      if (estado.warning) return `<div class="alert-box warning">Estás cerca del límite en ${escapeHtml(getCategoryName(category))} (${estado.percent.toFixed(0)}%)</div>`;
       return "";
     })
     .filter(Boolean);
@@ -688,14 +803,8 @@ function mostrarAlertasPresupuesto() {
 }
 
 function actualizarResumen() {
-  const totalIncomeVES = transactions
-    .filter(t => t.type === "ingreso")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
-  const totalExpenseVES = transactions
-    .filter(t => t.type === "gasto")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
+  const totalIncomeVES = transactions.filter(t => t.type === "ingreso").reduce((sum, t) => sum + t.amountVES, 0);
+  const totalExpenseVES = transactions.filter(t => t.type === "gasto").reduce((sum, t) => sum + t.amountVES, 0);
   const balanceVES = totalIncomeVES - totalExpenseVES;
 
   const totalIncomeEl = document.getElementById("totalIncome");
@@ -761,7 +870,6 @@ function cargarMetaAhorro() {
       savingGoal = parsed;
     } else {
       savingGoal = parsed.amountVES || 0;
-
       const input = document.getElementById("savingGoalInput");
       const currencySelect = document.getElementById("savingGoalCurrency");
 
@@ -785,11 +893,7 @@ function obtenerProximoPagoGlobal() {
     if (!cuota) return;
 
     if (!proxima || cuota.dueDate < proxima.dueDate) {
-      proxima = {
-        ...cuota,
-        purchaseDescription: purchase.description,
-        currency: purchase.currency
-      };
+      proxima = { ...cuota, purchaseDescription: purchase.description, currency: purchase.currency };
     }
   });
 
@@ -945,9 +1049,7 @@ function eliminarCompraCashea(id) {
 
   const compra = casheaPurchases.find(item => item.id === id);
   if (compra) {
-    compra.installments.forEach(inst => {
-      eliminarTransaccionCashea(id, inst.number, false);
-    });
+    compra.installments.forEach(inst => eliminarTransaccionCashea(id, inst.number, false));
   }
 
   casheaPurchases = casheaPurchases.filter(item => item.id !== id);
@@ -957,23 +1059,14 @@ function eliminarCompraCashea(id) {
 }
 
 function calcularResumenCompraCashea(purchase) {
-  const paidInstallmentsVES = purchase.installments
-    .filter(item => item.paid)
-    .reduce((sum, item) => sum + item.amountVES, 0);
-
+  const paidInstallmentsVES = purchase.installments.filter(item => item.paid).reduce((sum, item) => sum + item.amountVES, 0);
   const paidTotalVES = purchase.initialVES + paidInstallmentsVES;
   const pendingVES = Math.max(purchase.totalVES - paidTotalVES, 0);
   const pendingInstallments = purchase.installments.filter(item => !item.paid).length;
   const nextInstallment = purchase.installments.find(item => !item.paid) || null;
   const overdueCount = purchase.installments.filter(item => !item.paid && fechaEstaVencida(item.dueDate)).length;
 
-  return {
-    paidTotalVES,
-    pendingVES,
-    pendingInstallments,
-    nextInstallment,
-    overdueCount
-  };
+  return { paidTotalVES, pendingVES, pendingInstallments, nextInstallment, overdueCount };
 }
 
 function mostrarComprasCashea() {
@@ -1020,9 +1113,7 @@ function mostrarComprasCashea() {
                   <div class="transaction-original">${formatMoney(item.amountOriginal, purchase.currency)}</div>
                   <div class="transaction-date">Vence: ${formatearFecha(item.dueDate)}</div>
                   <div class="transaction-date">
-                    ${item.paid
-                      ? `Pagada el ${formatearFecha(item.paidDate)}`
-                      : (fechaEstaVencida(item.dueDate) ? "Vencida" : "Pendiente por pagar")}
+                    ${item.paid ? `Pagada el ${formatearFecha(item.paidDate)}` : (fechaEstaVencida(item.dueDate) ? "Vencida" : "Pendiente por pagar")}
                   </div>
                 </div>
                 <button class="btn ${item.paid ? "btn-secondary" : "btn-primary"} btn-small" onclick="toggleCasheaInstallment(${purchase.id}, ${item.number})">
@@ -1066,15 +1157,12 @@ function actualizarGraficos() {
 function actualizarGraficoGastos() {
   const gastosPorCategoria = {};
 
-  transactions
-    .filter(t => t.type === "gasto")
-    .forEach(t => {
-      gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
-    });
+  transactions.filter(t => t.type === "gasto").forEach(t => {
+    gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
+  });
 
   const ctx = document.getElementById("gastosChart");
   if (!ctx) return;
-
   if (gastosChart) gastosChart.destroy();
 
   gastosChart = new Chart(ctx, {
@@ -1083,39 +1171,19 @@ function actualizarGraficoGastos() {
       labels: Object.keys(gastosPorCategoria).map(cat => `${getCategoryEmoji(cat)} ${getCategoryName(cat)}`),
       datasets: [{
         data: Object.values(gastosPorCategoria).map(valor => convertFromVES(valor, displayCurrency)),
-        backgroundColor: [
-          "#6366f1",
-          "#8b5cf6",
-          "#10b981",
-          "#f59e0b",
-          "#ef4444",
-          "#06b6d4",
-          "#84cc16",
-          "#f97316",
-          "#14b8a6",
-          "#e879f9"
-        ]
+        backgroundColor: ["#6366f1", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#84cc16", "#f97316", "#14b8a6", "#e879f9"]
       }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
-    }
+    options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
 function actualizarGraficoBalance() {
-  const ingresosVES = transactions
-    .filter(t => t.type === "ingreso")
-    .reduce((sum, t) => sum + t.amountVES, 0);
-
-  const gastosVES = transactions
-    .filter(t => t.type === "gasto")
-    .reduce((sum, t) => sum + t.amountVES, 0);
+  const ingresosVES = transactions.filter(t => t.type === "ingreso").reduce((sum, t) => sum + t.amountVES, 0);
+  const gastosVES = transactions.filter(t => t.type === "gasto").reduce((sum, t) => sum + t.amountVES, 0);
 
   const ctx = document.getElementById("balanceChart");
   if (!ctx) return;
-
   if (balanceChart) balanceChart.destroy();
 
   balanceChart = new Chart(ctx, {
@@ -1124,17 +1192,11 @@ function actualizarGraficoBalance() {
       labels: ["Ingresos", "Gastos"],
       datasets: [{
         label: `Monto en ${displayCurrency}`,
-        data: [
-          convertFromVES(ingresosVES, displayCurrency),
-          convertFromVES(gastosVES, displayCurrency)
-        ],
+        data: [convertFromVES(ingresosVES, displayCurrency), convertFromVES(gastosVES, displayCurrency)],
         backgroundColor: ["#10b981", "#ef4444"]
       }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
-    }
+    options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
@@ -1143,10 +1205,7 @@ function llenarMesesReporte() {
   if (!select) return;
 
   const mesesUnicos = [...new Set(transactions.map(t => t.date.slice(0, 7)))].sort().reverse();
-
-  select.innerHTML =
-    '<option value="">Selecciona un mes</option>' +
-    mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
+  select.innerHTML = '<option value="">Selecciona un mes</option>' + mesesUnicos.map(mes => `<option value="${mes}">${formatearMes(mes)}</option>`).join("");
 }
 
 function generarReporte() {
@@ -1165,11 +1224,9 @@ function generarReporte() {
   const balanceVES = ingresosVES - gastosVES;
 
   const gastosPorCategoria = {};
-  delMes
-    .filter(t => t.type === "gasto")
-    .forEach(t => {
-      gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
-    });
+  delMes.filter(t => t.type === "gasto").forEach(t => {
+    gastosPorCategoria[t.category] = (gastosPorCategoria[t.category] || 0) + t.amountVES;
+  });
 
   let topCategory = "Sin gastos";
   let topAmount = 0;
@@ -1209,25 +1266,12 @@ function generarReporte() {
 function cambiarTab(tab) {
   document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
-
   document.getElementById(`tab-${tab}`)?.classList.add("active");
 
   const botones = document.querySelectorAll(".tab-btn");
-  const mapa = {
-    transacciones: 0,
-    cashea: 1,
-    graficos: 2,
-    reportes: 3,
-    configuracion: 4
-  };
-
-  if (typeof mapa[tab] !== "undefined" && botones[mapa[tab]]) {
-    botones[mapa[tab]].classList.add("active");
-  }
-
-  if (tab === "graficos") {
-    setTimeout(actualizarGraficos, 100);
-  }
+  const mapa = { transacciones: 0, cashea: 1, graficos: 2, reportes: 3, configuracion: 4 };
+  if (typeof mapa[tab] !== "undefined" && botones[mapa[tab]]) botones[mapa[tab]].classList.add("active");
+  if (tab === "graficos") setTimeout(actualizarGraficos, 100);
 }
 
 function toggleDarkMode() {
@@ -1239,11 +1283,7 @@ function toggleDarkMode() {
 function inicializarTema() {
   const savedTheme = localStorage.getItem("themeMode") || "dark";
   document.body.classList.remove("light-mode");
-
-  if (savedTheme === "light") {
-    document.body.classList.add("light-mode");
-  }
-
+  if (savedTheme === "light") document.body.classList.add("light-mode");
   actualizarBotonTema();
 }
 
@@ -1256,6 +1296,11 @@ function guardarConfiguracionMoneda() {
 
 function cargarConfiguracionMoneda() {
   displayCurrency = localStorage.getItem("displayCurrency") || "VES";
+}
+
+function guardarTasasEnStorage() {
+  localStorage.setItem("exchangeRates", JSON.stringify(exchangeRates));
+  localStorage.setItem("exchangeRateMeta", JSON.stringify(rateMeta));
 }
 
 function guardarTasas() {
@@ -1272,21 +1317,36 @@ function guardarTasas() {
   exchangeRates.EUR = eur;
   exchangeRates.USDT = usdt;
 
-  localStorage.setItem("exchangeRates", JSON.stringify(exchangeRates));
+  rateMeta = {
+    lastUpdated: new Date().toISOString(),
+    mode: "manual",
+    source: "Local"
+  };
+
+  guardarTasasEnStorage();
   pintarFormularioTasas();
   renderTodo();
   generarReporteSiExiste();
+  alert("✅ Tasas guardadas manualmente.");
 }
 
 function cargarTasas() {
   const saved = localStorage.getItem("exchangeRates");
-  if (!saved) return;
+  const metaSaved = localStorage.getItem("exchangeRateMeta");
 
-  try {
-    const parsed = JSON.parse(saved);
-    exchangeRates = { ...exchangeRates, ...parsed, VES: 1 };
-  } catch {
-    exchangeRates.VES = 1;
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      exchangeRates = { ...exchangeRates, ...parsed, VES: 1 };
+    } catch {
+      exchangeRates.VES = 1;
+    }
+  }
+
+  if (metaSaved) {
+    try {
+      rateMeta = { ...rateMeta, ...JSON.parse(metaSaved) };
+    } catch {}
   }
 }
 
@@ -1374,15 +1434,13 @@ function descargarDatos() {
     casheaPurchases,
     displayCurrency,
     exchangeRates,
+    exchangeRateMeta: rateMeta,
     categories,
     savingGoal,
     exportadoEn: new Date().toISOString()
   };
 
-  const blob = new Blob([JSON.stringify(datos, null, 2)], {
-    type: "application/json"
-  });
-
+  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1427,7 +1485,6 @@ function exportarCSV() {
 
   const csv = [header, ...transaccionesRows, ...casheaRows].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1465,9 +1522,7 @@ function limpiarDatos() {
   if (casheaForm) casheaForm.reset();
 
   const reportContent = document.getElementById("reportContent");
-  if (reportContent) {
-    reportContent.innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
-  }
+  if (reportContent) reportContent.innerHTML = '<p class="empty-message">Selecciona un mes para ver el reporte</p>';
 
   configurarFecha();
 }
@@ -1479,10 +1534,7 @@ function formatearFecha(fecha) {
 function formatearMes(valor) {
   const [year, month] = valor.split("-");
   const fecha = new Date(Number(year), Number(month) - 1, 1);
-  return fecha.toLocaleDateString("es-VE", {
-    month: "long",
-    year: "numeric"
-  });
+  return fecha.toLocaleDateString("es-VE", { month: "long", year: "numeric" });
 }
 
 function escapeHtml(texto) {
