@@ -245,7 +245,7 @@ async function actualizarTasasAutomaticamente() {
     const tasas = await obtenerTasasExternasSeguras();
 
     if (!tasas || (!tasas.USD && !tasas.EUR && !tasas.USDT)) {
-      alert("No se pudieron actualizar las tasas automáticamente. Puedes seguir usando las tasas manuales.");
+      alert("No se pudieron actualizar las tasas desde alcambio.app. Puedes seguir usando las tasas manuales.");
       return;
     }
 
@@ -256,7 +256,7 @@ async function actualizarTasasAutomaticamente() {
     rateMeta = {
       lastUpdated: new Date().toISOString(),
       mode: "automatico",
-      source: "alcambio.app (lectura externa tolerante)"
+      source: "https://alcambio.app/tasas"
     };
 
     guardarTasasEnStorage();
@@ -264,10 +264,10 @@ async function actualizarTasasAutomaticamente() {
     renderTodo();
     generarReporteSiExiste();
 
-    alert("✅ Tasas actualizadas automáticamente.");
+    alert("✅ Tasas actualizadas desde alcambio.app");
   } catch (error) {
     console.error("Error actualizando tasas:", error);
-    alert("No se pudieron actualizar las tasas automáticamente. Puedes seguir usando las tasas manuales.");
+    alert("No se pudieron actualizar las tasas desde alcambio.app. Puedes seguir usando las tasas manuales.");
   } finally {
     if (boton) {
       boton.disabled = false;
@@ -277,47 +277,30 @@ async function actualizarTasasAutomaticamente() {
 }
 
 async function obtenerTasasExternasSeguras() {
-  const candidatos = [intentarFuenteHTMLSegura];
-
-  for (const intento of candidatos) {
-    try {
-      const resultado = await intento();
-      if (resultado && (resultado.USD || resultado.EUR || resultado.USDT)) {
-        return resultado;
-      }
-    } catch (error) {
-      console.warn("Fuente externa falló:", error);
-    }
-  }
-
-  return null;
+  return await intentarFuenteHTMLSegura();
 }
 
 async function intentarFuenteHTMLSegura() {
-  const proxies = [
-    "https://api.allorigins.win/raw?url=",
-    "https://r.jina.ai/http://"
-  ];
-
   const urlObjetivo = "https://alcambio.app/tasas";
 
-  for (const proxy of proxies) {
-    try {
-      const finalUrl = proxy.includes("r.jina.ai/http://")
-        ? `${proxy}${urlObjetivo.replace("https://", "")}`
-        : `${proxy}${encodeURIComponent(urlObjetivo)}`;
+  const urlsPrueba = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(urlObjetivo)}`,
+    `https://r.jina.ai/http://${urlObjetivo.replace("https://", "")}`
+  ];
 
-      const response = await fetch(finalUrl, { method: "GET" });
+  for (const url of urlsPrueba) {
+    try {
+      const response = await fetch(url);
       if (!response.ok) continue;
 
       const html = await response.text();
       const tasas = extraerTasasDesdeTexto(html);
 
-      if (tasas.USD || tasas.EUR || tasas.USDT) {
+      if (tasas && (tasas.USD || tasas.EUR || tasas.USDT)) {
         return tasas;
       }
     } catch (error) {
-      console.warn("No se pudo leer con proxy:", proxy, error);
+      console.warn("Falló lectura externa:", url, error);
     }
   }
 
