@@ -66,19 +66,26 @@ function mostrarToast(mensaje, tipo = "info") {
   }, 2800);
 }
 
-function cambiarTema() {
-  const selector = document.getElementById("themeSelector");
-  const theme = selector?.value || "noche";
-  document.body.setAttribute("data-theme", theme);
-  localStorage.setItem("appTheme", theme);
-  mostrarToast("Tema actualizado.", "info");
+function toggleTheme() {
+  const body = document.body;
+  const isDark = body.classList.contains("theme-dark");
+  body.classList.toggle("theme-dark", !isDark);
+  body.classList.toggle("theme-light", isDark);
+  localStorage.setItem("appTheme", isDark ? "light" : "dark");
+  actualizarBotonTema();
 }
 
 function inicializarTema() {
-  const savedTheme = localStorage.getItem("appTheme") || "noche";
-  document.body.setAttribute("data-theme", savedTheme);
-  const selector = document.getElementById("themeSelector");
-  if (selector) selector.value = savedTheme;
+  const saved = localStorage.getItem("appTheme") || "dark";
+  document.body.classList.remove("theme-dark", "theme-light");
+  document.body.classList.add(saved === "light" ? "theme-light" : "theme-dark");
+  actualizarBotonTema();
+}
+
+function actualizarBotonTema() {
+  const btn = document.getElementById("themeToggleBtn");
+  if (!btn) return;
+  btn.textContent = document.body.classList.contains("theme-light") ? "Tema oscuro" : "Tema claro";
 }
 
 function getCurrencySourceLabel(currency) {
@@ -184,6 +191,7 @@ function renderTodo() {
   actualizarGraficos();
   actualizarVistaConversion();
   actualizarPanelTasas();
+  actualizarBotonTema();
 }
 
 function formatMoney(value, currency = displayCurrency) {
@@ -980,13 +988,10 @@ function guardarCompraCashea(e) {
     if (previous) {
       installments = installments.map(newInst => {
         const oldInst = previous.installments.find(i => i.number === newInst.number);
-        if (oldInst) {
-          return { ...newInst, paid: oldInst.paid, paidDate: oldInst.paidDate || null };
-        }
+        if (oldInst) return { ...newInst, paid: oldInst.paid, paidDate: oldInst.paidDate || null };
         return newInst;
       });
     }
-
     eliminarTransaccionesDeCompraCashea(purchaseId);
     casheaPurchases = casheaPurchases.filter(item => item.id !== purchaseId);
   }
@@ -1207,7 +1212,7 @@ function actualizarGraficoGastos() {
       labels: Object.keys(gastosPorCategoria).map(cat => `${getCategoryEmoji(cat)} ${getCategoryName(cat)}`),
       datasets: [{
         data: Object.values(gastosPorCategoria).map(valor => convertFromVES(valor, displayCurrency)),
-        backgroundColor: ["#1d4ed8", "#2563eb", "#0f766e", "#ca8a04", "#dc2626", "#0891b2", "#7c3aed", "#475569"]
+        backgroundColor: ["#3b82f6", "#14b8a6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#64748b", "#06b6d4"]
       }]
     },
     options: { responsive: true, maintainAspectRatio: false }
@@ -1229,7 +1234,7 @@ function actualizarGraficoBalance() {
       datasets: [{
         label: `Monto en ${displayCurrency}`,
         data: [convertFromVES(ingresosVES, displayCurrency), convertFromVES(gastosVES, displayCurrency)],
-        backgroundColor: ["#059669", "#dc2626"]
+        backgroundColor: ["#10b981", "#ef4444"]
       }]
     },
     options: { responsive: true, maintainAspectRatio: false }
