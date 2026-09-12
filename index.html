@@ -22,60 +22,25 @@
       </div>
     </header>
 
-    <section class="summary-section">
-      <div class="summary-card income">
-        <h3>Ingresos Totales</h3>
-        <p class="amount" id="totalIncome">Bs 0,00</p>
+    <section class="kpi-strip">
+      <div class="kpi-card income">
+        <span class="kpi-label">Ingresos</span>
+        <strong class="kpi-value" id="totalIncome">Bs 0,00</strong>
       </div>
-      <div class="summary-card expense">
-        <h3>Gastos Totales</h3>
-        <p class="amount" id="totalExpense">Bs 0,00</p>
-      </div>
-      <div class="summary-card balance">
-        <h3>Balance</h3>
-        <p class="amount" id="balance">Bs 0,00</p>
-      </div>
-      <div class="summary-card budget">
-        <h3>Presupuesto Usado</h3>
-        <p class="amount" id="budgetUsed">0%</p>
-      </div>
-    </section>
 
-    <section class="summary-section">
-      <div class="summary-card balance">
-        <h3>Meta de Ahorro</h3>
-        <p class="amount" id="savingGoalAmount">Bs 0,00</p>
+      <div class="kpi-card expense">
+        <span class="kpi-label">Gastos</span>
+        <strong class="kpi-value" id="totalExpense">Bs 0,00</strong>
       </div>
-      <div class="summary-card income">
-        <h3>Ahorro Actual</h3>
-        <p class="amount" id="currentSavings">Bs 0,00</p>
-      </div>
-      <div class="summary-card expense">
-        <h3>Faltante</h3>
-        <p class="amount" id="remainingSavings">Bs 0,00</p>
-      </div>
-      <div class="summary-card budget">
-        <h3>Progreso</h3>
-        <p class="amount" id="savingsProgressText">0%</p>
-      </div>
-    </section>
 
-    <section class="summary-section">
-      <div class="summary-card balance">
-        <h3>Cashea Total</h3>
-        <p class="amount" id="casheaTotalAmount">Bs 0,00</p>
+      <div class="kpi-card balance">
+        <span class="kpi-label">Balance</span>
+        <strong class="kpi-value" id="balance">Bs 0,00</strong>
       </div>
-      <div class="summary-card income">
-        <h3>Cashea Pagado</h3>
-        <p class="amount" id="casheaPaidAmount">Bs 0,00</p>
-      </div>
-      <div class="summary-card expense">
-        <h3>Cashea Pendiente</h3>
-        <p class="amount" id="casheaPendingAmount">Bs 0,00</p>
-      </div>
-      <div class="summary-card budget">
-        <h3>Próximo Pago</h3>
-        <p class="amount" id="casheaNextPayment">Sin cuotas</p>
+
+      <div class="kpi-card budget">
+        <span class="kpi-label">Próximo pago</span>
+        <strong class="kpi-value" id="casheaNextPayment">Sin cuotas</strong>
       </div>
     </section>
 
@@ -151,57 +116,13 @@
             </form>
           </section>
 
-          <section class="form-section form-categorias">
-            <h2 class="section-title icon-folder">Categorías personalizadas</h2>
-            <form id="categoryForm">
-              <div class="form-group">
-                <label for="newCategoryName">Nombre de la categoría:</label>
-                <input type="text" id="newCategoryName" placeholder="Ej: mascotas" required />
-              </div>
-              <div class="form-group">
-                <label for="newCategoryEmoji">Emoji:</label>
-                <input type="text" id="newCategoryEmoji" placeholder="🐶" maxlength="4" required />
-              </div>
-              <button type="submit" class="btn btn-primary">Agregar Categoría</button>
-            </form>
-            <div id="customCategoriesList" class="budgets-list" style="margin-top: 15px;"></div>
-          </section>
-
-          <section class="form-section form-presupuesto">
-            <h2 class="section-title icon-briefcase">Establecer Presupuesto</h2>
-            <form id="budgetForm">
-              <div class="form-group">
-                <label for="budgetCategory">Categoría:</label>
-                <select id="budgetCategory" required></select>
-              </div>
-
-              <div class="form-group">
-                <label for="budgetAmount">Monto:</label>
-                <input type="number" id="budgetAmount" step="0.01" min="0" required />
-              </div>
-
-              <div class="form-group">
-                <label for="budgetCurrency">Moneda del presupuesto:</label>
-                <select id="budgetCurrency" required>
-                  <option value="VES">Bolívar (VES)</option>
-                  <option value="USD">Dólar BCV (simulado)</option>
-                  <option value="EUR">Euro BCV (simulado)</option>
-                  <option value="USDT">USDT Binance (simulado)</option>
-                </select>
-              </div>
-
-              <button type="submit" class="btn btn-primary">Guardar Presupuesto</button>
-            </form>
-          </section>
-
-          <section class="form-section form-ahorro">
+          <section class="form-section">
             <h2 class="section-title icon-target">Meta de ahorro</h2>
             <form id="savingGoalForm">
               <div class="form-group">
                 <label for="savingGoalInput">Objetivo:</label>
                 <input type="number" id="savingGoalInput" step="0.01" min="0" required />
               </div>
-
               <div class="form-group">
                 <label for="savingGoalCurrency">Moneda de la meta:</label>
                 <select id="savingGoalCurrency" required>
@@ -211,9 +132,27 @@
                   <option value="USDT">USDT Binance (simulado)</option>
                 </select>
               </div>
-
               <button type="submit" class="btn btn-primary">Guardar Meta</button>
             </form>
+
+            <div class="mini-bank-grid" style="margin-top: 16px;">
+              <div class="mini-bank-card">
+                <span>Meta</span>
+                <strong id="savingGoalAmount">Bs 0,00</strong>
+              </div>
+              <div class="mini-bank-card">
+                <span>Actual</span>
+                <strong id="currentSavings">Bs 0,00</strong>
+              </div>
+              <div class="mini-bank-card">
+                <span>Faltante</span>
+                <strong id="remainingSavings">Bs 0,00</strong>
+              </div>
+              <div class="mini-bank-card">
+                <span>Progreso</span>
+                <strong id="savingsProgressText">0%</strong>
+              </div>
+            </div>
 
             <div style="margin-top: 15px;">
               <div class="budget-progress">
@@ -235,7 +174,7 @@
             <button class="btn btn-secondary filter-reset-btn" onclick="reiniciarFiltros()">Reiniciar filtros</button>
           </div>
 
-          <section class="list-section list-presupuestos">
+          <section class="list-section">
             <h2 class="section-title icon-briefcase">Presupuestos por Categoría</h2>
             <div id="budgetAlerts"></div>
             <div id="budgetsList" class="budgets-list">
@@ -243,7 +182,7 @@
             </div>
           </section>
 
-          <section class="list-section list-transacciones">
+          <section class="list-section">
             <h2 class="section-title icon-list">Transacciones</h2>
             <div id="transactionsList" class="transactions-list">
               <p class="empty-message">No hay transacciones registradas</p>
@@ -320,7 +259,29 @@
         </aside>
 
         <main class="content">
-          <section class="list-section list-cashea">
+          <section class="list-section">
+            <h2 class="section-title icon-card">Resumen Cashea</h2>
+            <div class="mini-bank-grid">
+              <div class="mini-bank-card">
+                <span>Total</span>
+                <strong id="casheaTotalAmount">Bs 0,00</strong>
+              </div>
+              <div class="mini-bank-card">
+                <span>Pagado</span>
+                <strong id="casheaPaidAmount">Bs 0,00</strong>
+              </div>
+              <div class="mini-bank-card">
+                <span>Pendiente</span>
+                <strong id="casheaPendingAmount">Bs 0,00</strong>
+              </div>
+              <div class="mini-bank-card">
+                <span>Próximo pago</span>
+                <strong id="casheaNextPaymentPanel">Sin cuotas</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="list-section">
             <h2 class="section-title icon-card">Compras Cashea</h2>
             <div id="casheaAlerts"></div>
             <div id="casheaList" class="transactions-list">
@@ -333,13 +294,13 @@
 
     <div id="tab-graficos" class="tab-content">
       <div class="charts-container">
-        <section class="chart-section chart-gastos">
+        <section class="chart-section">
           <h2 class="section-title icon-chart">Gastos por Categoría</h2>
           <div class="chart-wrapper">
             <canvas id="gastosChart"></canvas>
           </div>
         </section>
-        <section class="chart-section chart-balance">
+        <section class="chart-section">
           <h2 class="section-title icon-bars">Ingresos vs Gastos</h2>
           <div class="chart-wrapper">
             <canvas id="balanceChart"></canvas>
@@ -349,7 +310,7 @@
     </div>
 
     <div id="tab-reportes" class="tab-content">
-      <section class="report-section report-main">
+      <section class="report-section">
         <h2 class="section-title icon-report">Reporte Mensual</h2>
         <div class="report-filters">
           <select id="reportMonth" class="filter-input">
@@ -364,7 +325,7 @@
     </div>
 
     <div id="tab-configuracion" class="tab-content">
-      <section class="report-section settings-main">
+      <section class="report-section">
         <h2 class="section-title icon-settings">Configuración de Monedas</h2>
 
         <div class="rate-card">
@@ -402,9 +363,7 @@
 
         <div class="rate-card">
           <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas</button>
-          <p class="config-help">
-            Todo se guarda en el navegador. USD y EUR usan BCV simulado. USDT usa Binance simulado.
-          </p>
+          <p class="config-help">Todo se guarda localmente en este dispositivo.</p>
         </div>
       </section>
     </div>
