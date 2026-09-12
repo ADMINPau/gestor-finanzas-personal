@@ -22,10 +22,9 @@
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   --shadow-strong: 0 20px 45px rgba(0, 0, 0, 0.35);
   --transition: all 0.28s ease;
-  --radius-lg: 24px;
-  --radius-md: 18px;
-  --radius-sm: 14px;
-  --container-width: 1450px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
 }
 
 body.light-mode {
@@ -52,10 +51,6 @@ body.light-mode {
   min-width: 0;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   font-family: 'Inter', sans-serif;
   background: var(--background-color);
@@ -63,30 +58,17 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
-  transition: var(--transition);
-}
-
-img,
-canvas {
-  max-width: 100%;
-  display: block;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
 }
 
 .container {
-  width: min(100%, var(--container-width));
+  width: min(100%, 1450px);
   margin: 0 auto;
   padding: clamp(12px, 2vw, 24px);
 }
 
 .header,
-.summary-card,
+.kpi-card,
+.mini-bank-card,
 .form-section,
 .list-section,
 .chart-section,
@@ -107,26 +89,25 @@ textarea {
 
 .header {
   color: white;
-  padding: clamp(18px, 3vw, 34px);
+  padding: clamp(16px, 2vw, 24px);
   border-radius: var(--radius-lg);
-  margin-bottom: 28px;
+  margin-bottom: 18px;
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .header h1 {
   font-family: 'Orbitron', sans-serif;
-  font-size: clamp(1.5rem, 4vw, 3rem);
-  letter-spacing: 1px;
-  line-height: 1.15;
+  font-size: clamp(1.3rem, 3vw, 2.4rem);
+  line-height: 1.1;
 }
 
 .subtitle {
-  color: rgba(255,255,255,0.92);
-  font-size: clamp(0.92rem, 1.5vw, 1rem);
+  color: rgba(255,255,255,0.9);
+  font-size: 0.95rem;
 }
 
 .header-buttons {
@@ -135,32 +116,35 @@ textarea {
   flex-wrap: wrap;
 }
 
-.summary-section {
+.kpi-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
-  gap: 18px;
-  margin-bottom: 22px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
-.summary-card {
-  padding: clamp(14px, 2vw, 22px);
-  border-radius: 20px;
-  overflow: hidden;
+.kpi-card {
+  border-radius: 18px;
+  padding: 12px 14px;
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.summary-card h3 {
-  font-size: clamp(0.8rem, 1.4vw, 0.95rem);
-  margin-bottom: 10px;
+.kpi-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
   color: var(--text-secondary);
-  line-height: 1.3;
+  margin-bottom: 4px;
 }
 
-.summary-card .amount {
-  font-size: clamp(1rem, 2.6vw, 2rem);
+.kpi-value {
+  font-size: clamp(1rem, 2vw, 1.35rem);
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.1;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .income { border-left: 4px solid #22c55e; }
@@ -170,8 +154,8 @@ textarea {
 
 .tabs {
   display: flex;
-  gap: 12px;
-  margin-bottom: 22px;
+  gap: 10px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
 }
 
@@ -179,22 +163,20 @@ textarea {
   border: 1px solid var(--border-color);
   background: rgba(255,255,255,0.06);
   color: var(--text-primary);
-  padding: 12px 18px 12px 42px;
+  padding: 11px 16px 11px 38px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
-  transition: var(--transition);
   position: relative;
-  flex: 0 1 auto;
 }
 
 .tab-btn::before {
   content: "";
   position: absolute;
-  left: 16px;
+  left: 14px;
   top: 50%;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   transform: translateY(-50%);
   border-radius: 4px;
   background: linear-gradient(135deg, #8b5cf6, #06b6d4);
@@ -211,18 +193,13 @@ textarea {
   border-color: transparent;
 }
 
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
 .main-content {
   display: grid;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 22px;
+  gap: 18px;
   align-items: start;
 }
 
@@ -230,7 +207,7 @@ textarea {
 .content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .form-section,
@@ -238,8 +215,8 @@ textarea {
 .chart-section,
 .report-section,
 .rate-card {
-  padding: clamp(16px, 2vw, 22px);
-  border-radius: 22px;
+  padding: 18px;
+  border-radius: 20px;
 }
 
 .section-title,
@@ -247,11 +224,10 @@ textarea {
 .cashea-installments h4 {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 14px;
   font-weight: 800;
-  position: relative;
-  line-height: 1.25;
+  line-height: 1.2;
   flex-wrap: wrap;
 }
 
@@ -259,7 +235,7 @@ textarea {
 .mini-title::after,
 .cashea-installments h4::after {
   content: "";
-  flex: 1 1 120px;
+  flex: 1 1 100px;
   height: 1px;
   background: linear-gradient(90deg, rgba(6, 182, 212, 0.45), transparent);
 }
@@ -267,8 +243,8 @@ textarea {
 .section-title::before,
 .mini-title::before {
   content: "";
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 5px;
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   display: inline-block;
@@ -280,6 +256,33 @@ textarea {
 .icon-convert::before,
 .icon-coin::before {
   border-radius: 50%;
+}
+
+.mini-bank-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.mini-bank-card {
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.mini-bank-card span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mini-bank-card strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .form-section.editing {
@@ -307,7 +310,7 @@ textarea {
 .form-group textarea,
 .filter-input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 11px 13px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: rgba(255,255,255,0.08);
@@ -323,28 +326,26 @@ body.light-mode .filter-input {
 
 .form-group textarea {
   resize: vertical;
-  min-height: 95px;
+  min-height: 90px;
 }
 
 .filters,
 .report-filters {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .filter-input {
   flex: 1 1 180px;
-  min-width: 0;
 }
 
 .btn {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  padding: 11px 16px;
+  padding: 10px 14px;
   cursor: pointer;
   font-weight: 700;
-  white-space: normal;
 }
 
 .btn-primary {
@@ -381,8 +382,8 @@ body.light-mode .btn-secondary {
 }
 
 .btn-small {
-  padding: 8px 11px;
-  font-size: 0.85rem;
+  padding: 8px 10px;
+  font-size: 0.84rem;
   width: auto;
 }
 
@@ -410,8 +411,8 @@ body.light-mode .btn-secondary {
 .custom-category-item,
 .conversion-item,
 .cashea-installment {
-  border-radius: var(--radius-md);
-  padding: 15px;
+  border-radius: 16px;
+  padding: 14px;
 }
 
 .transaction-item,
@@ -428,13 +429,17 @@ body.light-mode .btn-secondary {
 .transaction-item.ingreso { border-left: 4px solid var(--success-color); }
 
 .transaction-info {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 1;
 }
 
 .transaction-category,
 .custom-category-name {
   font-weight: 700;
+}
+
+.transaction-description {
+  color: var(--text-primary);
+  font-size: 1rem;
 }
 
 .transaction-description,
@@ -443,23 +448,23 @@ body.light-mode .btn-secondary {
 .transaction-original,
 .conversion-source,
 .config-help {
-  color: var(--text-secondary);
-  font-size: 0.92rem;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
-.transaction-description {
-  color: var(--text-primary);
-  font-size: 1rem;
+.transaction-date,
+.transaction-notes,
+.transaction-original,
+.conversion-source,
+.config-help {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .transaction-amount {
   font-weight: 800;
-  font-size: clamp(0.95rem, 2vw, 1.08rem);
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  font-size: 1rem;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .transaction-amount.gasto { color: var(--danger-color); }
@@ -469,7 +474,6 @@ body.light-mode .btn-secondary {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .budget-item.alerta { border-left: 4px solid var(--warning-color); }
@@ -477,7 +481,7 @@ body.light-mode .btn-secondary {
 
 .budget-progress {
   width: 100%;
-  height: 12px;
+  height: 10px;
   background: rgba(148, 163, 184, 0.2);
   border-radius: 999px;
   overflow: hidden;
@@ -502,7 +506,6 @@ body.light-mode .btn-secondary {
   border-radius: 14px;
   margin-bottom: 10px;
   font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
 .alert-box.warning {
@@ -518,12 +521,11 @@ body.light-mode .btn-secondary {
 .charts-container {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 18px;
 }
 
 .chart-wrapper {
-  width: 100%;
-  height: clamp(240px, 40vw, 320px);
+  height: clamp(240px, 38vw, 320px);
 }
 
 .empty-message {
@@ -532,42 +534,36 @@ body.light-mode .btn-secondary {
   padding: 18px;
 }
 
-.report-item-details,
 .cashea-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
-  gap: 12px;
-  margin-top: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
 }
 
 .cashea-card {
-  border-radius: 20px;
-  padding: 18px;
+  border-radius: 18px;
+  padding: 16px;
 }
 
 .cashea-mini-card {
   background: rgba(255,255,255,0.05);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
+  border-radius: 14px;
   padding: 12px;
 }
 
 body.light-mode .cashea-mini-card,
 body.light-mode .cashea-installment,
-body.light-mode .conversion-item {
+body.light-mode .conversion-item,
+body.light-mode .mini-bank-card {
   background: rgba(255,255,255,0.72);
 }
 
 .cashea-mini-card span {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   margin-bottom: 4px;
-}
-
-.cashea-mini-card strong {
-  overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .cashea-installment {
@@ -586,31 +582,27 @@ body.light-mode .conversion-item {
 }
 
 .conversion-box {
-  border-radius: 18px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 14px;
   margin-bottom: 14px;
 }
 
 .conversion-item {
   background: rgba(255,255,255,0.05);
-  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1100px) {
-  .main-content {
+  .main-content,
+  .charts-container {
     grid-template-columns: 1fr;
   }
 
-  .charts-container {
-    grid-template-columns: 1fr;
+  .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .summary-section {
-    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-  }
-
   .header,
   .transaction-item,
   .cashea-header,
@@ -623,11 +615,6 @@ body.light-mode .conversion-item {
     text-align: left;
   }
 
-  .transaction-actions {
-    justify-content: flex-start;
-    width: 100%;
-  }
-
   .tab-btn {
     flex: 1 1 220px;
   }
@@ -638,7 +625,7 @@ body.light-mode .conversion-item {
     padding: 12px;
   }
 
-  .summary-section {
+  .kpi-strip {
     grid-template-columns: 1fr;
   }
 
