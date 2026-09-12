@@ -416,12 +416,12 @@
         </div>
 
         <div class="rate-card">
-          <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas</button>
+          <button class="btn btn-primary" onclick="guardarTasas()">Guardar tasas manualmente</button>
           <button id="autoRatesButton" class="btn btn-secondary full-width" style="margin-top: 10px;" onclick="actualizarTasasAutomaticamente()">
-            Actualizar tasas automáticamente
+            Actualizar USD/EUR desde Google Sheets
           </button>
           <p class="config-help">
-            La actualización automática intenta leer referencias desde https://alcambio.app/tasas. Si falla, puedes seguir usando tasas manuales sin romper la app.
+            USD y EUR se pueden actualizar desde Google Sheets. USDT se mantiene manual.
           </p>
         </div>
       </section>
