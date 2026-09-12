@@ -12,7 +12,7 @@
     <header class="header">
       <div>
         <h1 id="mainGreeting">Hola, Paula</h1>
-        <p class="subtitle" id="mainSubtitle">Bienvenida a tu Gestor de Finanzas Personal</p>
+        <p class="subtitle" id="mainSubtitle">Organiza tus movimientos con calma</p>
       </div>
       <div class="header-buttons">
         <button class="btn btn-secondary" onclick="toggleDarkMode()">Cambiar tema</button>
@@ -38,6 +38,27 @@
       <div class="kpi-card budget">
         <span class="kpi-label">Próximo pago</span>
         <strong class="kpi-value" id="casheaNextPayment">Sin cuotas</strong>
+      </div>
+    </section>
+
+    <section class="quick-overview">
+      <div class="mini-bank-grid">
+        <div class="mini-bank-card">
+          <span>Mes actual</span>
+          <strong id="currentMonthLabel">—</strong>
+        </div>
+        <div class="mini-bank-card">
+          <span>Ingresos del mes</span>
+          <strong id="monthIncome">Bs 0,00</strong>
+        </div>
+        <div class="mini-bank-card">
+          <span>Gastos del mes</span>
+          <strong id="monthExpense">Bs 0,00</strong>
+        </div>
+        <div class="mini-bank-card">
+          <span>Balance del mes</span>
+          <strong id="monthBalance">Bs 0,00</strong>
+        </div>
       </div>
     </section>
 
@@ -427,6 +448,8 @@
       </section>
     </div>
   </div>
+
+  <div id="toastContainer" class="toast-container"></div>
 
   <script src="script.js"></script>
 </body>
